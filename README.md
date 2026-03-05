@@ -19,7 +19,7 @@
 <br/>
 
 ```
-  ⛺ Digitalisasi kegiatan Pramuka — dari absensi hingga pembelajaran interaktif
+⛺ Digitalisasi kegiatan Pramuka — dari absensi hingga pembelajaran interaktif
 ```
 
 </div>
@@ -121,37 +121,21 @@ Upload foto, role system<br/>
 
 ## 🎮 Minigame Kepramukaan
 
-<div align="center">
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   🏆 GAME CENTER                        │
-├─────────┬──────────────────────────────────┬────────────┤
-│  📚     │  Kuis Pilihan Ganda             │  +12 XP    │
-│         │  10 soal dari 37+ bank soal     │  /soal     │
-├─────────┼──────────────────────────────────┼────────────┤
-│  ✅     │  Benar atau Salah               │  +6 XP     │
-│         │  Sprint 15 pernyataan cepat     │  /soal     │
-├─────────┼──────────────────────────────────┼────────────┤
-│  🔤     │  Susun Kata                     │  +15 XP    │
-│         │  Acak huruf → istilah Pramuka   │  /kata     │
-├─────────┼──────────────────────────────────┼────────────┤
-│  🃏     │  Memory Match                   │  +20 XP    │
-│         │  Cocokkan golongan & usia       │  /selesai  │
-├─────────┼──────────────────────────────────┼────────────┤
-│  🎭     │  Tebak Emoji                    │  +10 XP    │
-│         │  Tebak istilah dari emoji       │  /soal     │
-└─────────┴──────────────────────────────────┴────────────┘
-```
-
-</div>
+| # | Game | Deskripsi | XP |
+|:-:|:-----|:----------|:--:|
+| 📚 | **Kuis Pilihan Ganda** | 10 soal dari 37+ bank soal | +12/soal |
+| ✅ | **Benar atau Salah** | Sprint 15 pernyataan cepat | +6/soal |
+| 🔤 | **Susun Kata** | Acak huruf → istilah Pramuka | +15/kata |
+| 🃏 | **Memory Match** | Cocokkan golongan & usia | +20/selesai |
+| 🎭 | **Tebak Emoji** | Tebak istilah dari emoji | +10/soal |
 
 ### 🏅 Sistem Level
 
-```
-🪵 Kayu → 🪨 Batu → 🥉 Perunggu → 🥈 Perak → 🥇 Emas
-→ 💎 Berlian → 🔮 Mutiara → ⚡ Legend → 🌟 Mythic → 👑 Grand Master
-```
+<div align="center">
+
+`🪵 Kayu` → `🪨 Batu` → `🥉 Perunggu` → `🥈 Perak` → `🥇 Emas` → `💎 Berlian` → `🔮 Mutiara` → `⚡ Legend` → `🌟 Mythic` → `👑 Grand Master`
+
+</div>
 
 <br/>
 
@@ -161,21 +145,13 @@ Upload foto, role system<br/>
 
 ## 🏗️ Tech Stack
 
-<div align="center">
-
-```
-╔══════════════════╦══════════════════╦══════════════════╦══════════════════╗
-║     BACKEND      ║     FRONTEND     ║     DATABASE     ║      TOOLS       ║
-╠══════════════════╬══════════════════╬══════════════════╬══════════════════╣
-║  Node.js 18+     ║  HTML5 / CSS3    ║  sql.js (SQLite) ║  QRCode.js       ║
-║  Express 4.x     ║  Vanilla JS      ║  pramuka.db      ║  ExcelJS         ║
-║  Socket.io 4.x   ║  Font Awesome    ║  game.db         ║  PDFKit          ║
-║  JWT + bcryptjs   ║  Google Fonts    ║                  ║  Multer          ║
-║  dotenv           ║  Firebase SDK    ║                  ║                  ║
-╚══════════════════╩══════════════════╩══════════════════╩══════════════════╝
-```
-
-</div>
+| Backend | Frontend | Database | Tools |
+|:--------|:---------|:---------|:------|
+| Node.js 18+ | HTML5 / CSS3 | sql.js (SQLite) | QRCode.js |
+| Express 4.x | Vanilla JS | pramuka.db | ExcelJS |
+| Socket.io 4.x | Font Awesome | game.db | PDFKit |
+| JWT + bcryptjs | Google Fonts | | Multer |
+| dotenv | Firebase SDK | | |
 
 <br/>
 
@@ -242,6 +218,8 @@ npm run dev
 <details>
 <summary><b>Klik untuk lihat langkah Termux</b></summary>
 
+<br/>
+
 ```bash
 pkg update && pkg upgrade
 pkg install nodejs git
@@ -268,30 +246,25 @@ npm start
 
 ```
 pramuka-smpn1-leuwigoong/
-│
-├── 📂 data/                     # Database (auto-generate, di .gitignore)
-│   ├── pramuka.db               #   → Users, posts, absensi, chat
-│   └── game.db                  #   → Players, scores, achievements
-│
-├── 📂 middleware/
+├── data/                        # Database (auto-generate, di .gitignore)
+│   ├── pramuka.db               #   Users, posts, absensi, chat
+│   └── game.db                  #   Players, scores, achievements
+├── middleware/
 │   └── auth.js                  # JWT authentication
-│
-├── 📂 public/                   # Frontend static files
-│   ├── 📂 css/style.css         #   → Stylesheet utama
-│   ├── 📂 js/                   #   → auth.js, app.js
-│   ├── 📂 images/               #   → Logo & assets
-│   ├── 📂 uploads/              #   → File upload user
-│   └── *.html                   #   → Halaman-halaman website
-│
-├── 📂 routes/                   # API endpoints
-│   ├── auth.js                  #   → Register, login, profil
-│   ├── posts.js                 #   → Blog & komentar
-│   ├── attendance.js            #   → Absensi QR + manual
-│   ├── chat.js                  #   → Pesan realtime
-│   ├── news.js                  #   → Berita & scraper
-│   ├── game.js                  #   → Minigame & leaderboard
-│   └── admin.js                 #   → Panel admin
-│
+├── public/                      # Frontend static files
+│   ├── css/style.css            #   Stylesheet utama
+│   ├── js/                      #   auth.js, app.js
+│   ├── images/                  #   Logo & assets
+│   ├── uploads/                 #   File upload user
+│   └── *.html                   #   Halaman-halaman website
+├── routes/                      # API endpoints
+│   ├── auth.js                  #   Register, login, profil
+│   ├── posts.js                 #   Blog & komentar
+│   ├── attendance.js            #   Absensi QR + manual
+│   ├── chat.js                  #   Pesan realtime
+│   ├── news.js                  #   Berita & scraper
+│   ├── game.js                  #   Minigame & leaderboard
+│   └── admin.js                 #   Panel admin
 ├── database.js                  # Init pramuka.db
 ├── game-database.js             # Init game.db
 ├── server.js                    # Entry point + Socket.io
@@ -331,12 +304,12 @@ pramuka-smpn1-leuwigoong/
 
 | Layer | Implementasi |
 |:------|:-------------|
-| 🔑 **Autentikasi** | JWT Token (7 hari) + httpOnly Cookie |
-| 🔐 **Password** | Hash bcryptjs (salt rounds: 10) |
-| 🌐 **OAuth** | Firebase Google Sign-In |
-| 📁 **Upload** | Validasi tipe file + max 3MB |
-| 🚫 **Secrets** | `.env` & `data/` di `.gitignore` |
-| 🔧 **Config** | Firebase config dari server, tidak hardcode |
+| 🔑 Autentikasi | JWT Token (7 hari) + httpOnly Cookie |
+| 🔐 Password | Hash bcryptjs (salt rounds: 10) |
+| 🌐 OAuth | Firebase Google Sign-In |
+| 📁 Upload | Validasi tipe file + max 3MB |
+| 🚫 Secrets | `.env` & `data/` di `.gitignore` |
+| 🔧 Config | Firebase config dari server, tidak hardcode |
 
 <br/>
 
@@ -378,38 +351,33 @@ Jika project ini bermanfaat, kamu bisa mendukung pengembangan melalui **donasi**
 
 <br/>
 
-### 💙 Donasi via DANA
-
 <img src="https://upload.wikimedia.org/wikipedia/commons/7/72/Logo_dana_blue.svg" width="120" alt="DANA"/>
 
 <br/><br/>
 
-```
-╔═══════════════════════════════════════╗
-║                                       ║
-║     📱  0838-1520-1912                ║
-║     👤  a/n Ripkidwiput               ║
-║                                       ║
-╚═══════════════════════════════════════╝
-```
+| | |
+|:-:|:-:|
+| 📱 **Nomor** | `0838-1520-1912` |
+| 👤 **Nama** | `a/n Ripkidwiput` |
 
 <br/>
 
-**Scan QR atau transfer ke nomor di atas** 👆
-
 Setiap donasi — berapapun — sangat berarti untuk:
-- ☕ Beli kopi biar begadang coding
-- 🖥️ Biaya server & hosting
-- 📚 Pengembangan fitur baru
-- 🏕️ Dukung kegiatan Pramuka
+
+| | |
+|:-:|:--|
+| ☕ | Beli kopi biar begadang coding |
+| 🖥️ | Biaya server & hosting |
+| 📚 | Pengembangan fitur baru |
+| 🏕️ | Dukung kegiatan Pramuka |
 
 <br/>
 
 > *"Sebaik-baik manusia adalah yang paling bermanfaat bagi orang lain."*
 
-<br/>
-
 </div>
+
+<br/>
 
 ---
 
@@ -433,7 +401,7 @@ Didistribusikan di bawah lisensi **MIT**. Lihat [`LICENSE`](LICENSE) untuk detai
 
 [<img src="https://img.shields.io/badge/WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" height="40"/>](https://wa.me/6283815201912?text=Halo%2C%20saya%20tertarik%20dengan%20project%20Website%20Pramuka!) [<img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" height="40"/>](https://github.com/ripkidwiput03-bit)
 
-<br/><br/>
+<br/>
 
 ---
 
