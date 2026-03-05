@@ -163,7 +163,7 @@ Upload foto, role system<br/>
 
 ### Prasyarat
 
-- **Node.js** 18+ atau **Termux** (Android)
+- **Node.js** 18+
 - **npm** (bawaan Node.js)
 
 ### Langkah Cepat
