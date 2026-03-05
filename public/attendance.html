@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Absensi - Pramuka SMPN 1 Leuwigoong</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+  <style>
+    @keyframes scanAnim {
+      0%   { top: 15%; }
+      50%  { top: 82%; }
+      100% { top: 15%; }
+    }
+    #qrViewfinder video { transform: scaleX(1); }
+    #btnModeCamera.active-mode  { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; border-color: transparent; }
+    #btnModeManual.active-mode  { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; border-color: transparent; }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <img src="/images/logo_pramuka_smpn1.svg" alt="Logo Pramuka SMPN 1 Leuwigoong" class="nav-logo"/>
+        <div class="nav-brand-text"><span class="brand-title">PRAMUKA</span><span class="brand-subtitle">SMPN 1 Leuwigoong</span></div>
+      </a>
+      <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+      <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link"><i class="fas fa-home"></i> Beranda</a>
+        <a href="/news.html" class="nav-link"><i class="fas fa-newspaper"></i> Berita</a>
+        <a href="/posts.html" class="nav-link"><i class="fas fa-pen-fancy"></i> Blog</a>
+        <a href="/attendance.html" class="nav-link active"><i class="fas fa-clipboard-check"></i> Absensi</a>
+         <a href="/game.html" class="nav-link auth-only"><i class="fas fa-gamepad"></i> Minigame</a>
+        <a href="/chat.html" class="nav-link"><i class="fas fa-comments"></i> Chat</a>
+        <a href="/admin.html" class="nav-link admin-only" style="display:none;"><i class="fas fa-shield-alt"></i> Admin</a>
+      </div>
+      <div class="nav-actions">
+        <button class="notif-btn" id="notifBtn"><i class="fas fa-bell"></i><span class="badge-notif" id="notifBadge" style="display:none;">0</span></button>
+        <div class="nav-user" id="navUser">
+          <img src="" alt="" class="nav-avatar" id="navAvatar">
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile.html"><i class="fas fa-user"></i> Profil</a>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <hr><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header"><h3>Notifikasi</h3><button class="notif-mark-read" id="markAllRead">Tandai dibaca</button></div>
+    <div class="notif-list" id="notifList"><div class="notif-empty">Tidak ada notifikasi</div></div>
+  </div>
+
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div class="container">
+        <h1><i class="fas fa-clipboard-check"></i> Absensi Digital</h1>
+        <p>Catat kehadiran dengan QR Code atau manual</p>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="container">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchAttTab('scan', this)">
+            <i class="fas fa-qrcode"></i> Scan QR
+          </button>
+          <button class="tab-btn" onclick="switchAttTab('sessions', this)">
+            <i class="fas fa-list"></i> Sesi Absensi
+          </button>
+          <button class="tab-btn" onclick="switchAttTab('history', this)">
+            <i class="fas fa-history"></i> Riwayat Saya
+          </button>
+          <button class="tab-btn admin-only" style="display:none;" onclick="switchAttTab('create', this)">
+            <i class="fas fa-plus-circle"></i> Buat Sesi
+          </button>
+        </div>
+
+        <!-- Scan QR Tab -->
+        <div class="admin-tab active" id="tab-scan">
+          <div class="card">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <h3><i class="fas fa-qrcode"></i> Scan QR Code Absensi</h3>
+              <span id="scanStatusBadge" style="display:none;font-size:11px;padding:4px 12px;border-radius:999px;font-weight:600;"></span>
+            </div>
+            <div class="card-body">
+              <!-- Mode switcher -->
+              <div style="display:flex;gap:8px;justify-content:center;margin-bottom:22px;">
+                <button class="btn btn-primary btn-sm" id="btnModeCamera" onclick="setScanMode('camera')">
+                  <i class="fas fa-camera"></i> Kamera
+                </button>
+                <button class="btn btn-outline-sm" id="btnModeManual" onclick="setScanMode('manual')">
+                  <i class="fas fa-keyboard"></i> Input Manual
+                </button>
+              </div>
+
+              <!-- ── CAMERA MODE ── -->
+              <div id="cameraModeSection">
+                <div style="max-width:360px;margin:0 auto;text-align:center;">
+                  <!-- Viewfinder -->
+                  <div id="qrViewfinder" style="
+                    position:relative;
+                    width:100%;
+                    aspect-ratio:1/1;
+                    border-radius:16px;
+                    overflow:hidden;
+                    background:#111;
+                    margin-bottom:16px;
+                    box-shadow:0 8px 30px rgba(0,0,0,0.25);
+                  ">
+                    <!-- Video -->
+                    <video id="qrVideo" style="width:100%;height:100%;object-fit:cover;display:block;" playsinline muted></video>
+                    <!-- Canvas tersembunyi untuk decode -->
+                    <canvas id="qrCanvas" style="display:none;"></canvas>
+
+                    <!-- Corner guides -->
+                    <div style="position:absolute;inset:0;pointer-events:none;">
+                      <!-- TL -->
+                      <div style="position:absolute;top:16px;left:16px;width:36px;height:36px;border-top:3px solid #ffc107;border-left:3px solid #ffc107;border-radius:4px 0 0 0;"></div>
+                      <!-- TR -->
+                      <div style="position:absolute;top:16px;right:16px;width:36px;height:36px;border-top:3px solid #ffc107;border-right:3px solid #ffc107;border-radius:0 4px 0 0;"></div>
+                      <!-- BL -->
+                      <div style="position:absolute;bottom:16px;left:16px;width:36px;height:36px;border-bottom:3px solid #ffc107;border-left:3px solid #ffc107;border-radius:0 0 0 4px;"></div>
+                      <!-- BR -->
+                      <div style="position:absolute;bottom:16px;right:16px;width:36px;height:36px;border-bottom:3px solid #ffc107;border-right:3px solid #ffc107;border-radius:0 0 4px 0;"></div>
+                      <!-- Scan line -->
+                      <div id="scanLine" style="
+                        position:absolute;left:16px;right:16px;height:2px;
+                        background:linear-gradient(90deg,transparent,#ffc107,transparent);
+                        animation:scanAnim 2s ease-in-out infinite;
+                        top:50%;
+                      "></div>
+                    </div>
+
+                    <!-- Overlay idle (kamera belum aktif) -->
+                    <div id="cameraIdle" style="
+                      position:absolute;inset:0;background:rgba(0,0,0,0.75);
+                      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:white;
+                    ">
+                      <i class="fas fa-camera" style="font-size:40px;color:#ffc107;"></i>
+                      <p style="font-size:13px;text-align:center;padding:0 20px;opacity:0.85;">Tekan tombol di bawah<br>untuk mengaktifkan kamera</p>
+                    </div>
+
+                    <!-- Overlay success -->
+                    <div id="cameraSuccess" style="
+                      position:absolute;inset:0;background:rgba(27,94,32,0.88);
+                      display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:white;
+                    ">
+                      <i class="fas fa-check-circle" style="font-size:56px;color:#ffc107;"></i>
+                      <p style="font-size:15px;font-weight:700;" id="successMsg">Absensi Berhasil!</p>
+                    </div>
+
+                    <!-- Overlay error -->
+                    <div id="cameraError" style="
+                      position:absolute;inset:0;background:rgba(183,28,28,0.85);
+                      display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:white;padding:20px;text-align:center;
+                    ">
+                      <i class="fas fa-times-circle" style="font-size:48px;"></i>
+                      <p style="font-size:13px;font-weight:600;" id="errorMsg">Gagal absen</p>
+                      <button class="btn btn-sm" style="background:white;color:#b71c1c;" onclick="resumeScanner()">
+                        <i class="fas fa-redo"></i> Coba Lagi
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Control buttons -->
+                  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">
+                    <button class="btn btn-primary" id="btnStartCamera" onclick="startCamera()">
+                      <i class="fas fa-play"></i> Aktifkan Kamera
+                    </button>
+                    <button class="btn btn-outline-sm" id="btnStopCamera" onclick="stopCamera()" style="display:none;">
+                      <i class="fas fa-stop"></i> Matikan
+                    </button>
+                    <button class="btn btn-outline-sm" id="btnFlipCamera" onclick="flipCamera()" style="display:none;" title="Ganti kamera">
+                      <i class="fas fa-sync-alt"></i>
+                    </button>
+                  </div>
+
+                  <p style="font-size:12px;color:#999;"><i class="fas fa-info-circle"></i> Arahkan kamera ke QR Code absensi yang diberikan pembina</p>
+                </div>
+              </div>
+
+              <!-- ── MANUAL MODE ── -->
+              <div id="manualModeSection" style="display:none;max-width:400px;margin:0 auto;text-align:center;">
+                <div style="margin-bottom:20px;">
+                  <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" style="width:120px;opacity:0.35;margin-bottom:16px;">
+                    <rect x="40" y="40" width="80" height="80" rx="5" fill="#2d5016"/><rect x="50" y="50" width="60" height="60" rx="3" fill="#f0f8e8"/><rect x="60" y="60" width="40" height="40" rx="2" fill="#2d5016"/>
+                    <rect x="180" y="40" width="80" height="80" rx="5" fill="#2d5016"/><rect x="190" y="50" width="60" height="60" rx="3" fill="#f0f8e8"/><rect x="200" y="60" width="40" height="40" rx="2" fill="#2d5016"/>
+                    <rect x="40" y="180" width="80" height="80" rx="5" fill="#2d5016"/><rect x="50" y="190" width="60" height="60" rx="3" fill="#f0f8e8"/><rect x="60" y="200" width="40" height="40" rx="2" fill="#2d5016"/>
+                  </svg>
+                </div>
+                <div class="form-group">
+                  <input type="text" id="qrSessionId" class="form-input" placeholder="Masukkan Session ID dari QR Code..." style="text-align:center;font-size:15px;letter-spacing:1px;">
+                </div>
+                <button class="btn btn-primary btn-lg btn-block" onclick="checkInManual()">
+                  <i class="fas fa-check-circle"></i> Absen Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div class="admin-tab" id="tab-sessions">
+          <div id="sessionsContainer">
+            <div class="loading-spinner"><div class="spinner"></div><p>Memuat sesi...</p></div>
+          </div>
+        </div>
+
+        <!-- History Tab -->
+        <div class="admin-tab" id="tab-history">
+          <div class="card">
+            <div class="card-header"><h3><i class="fas fa-history"></i> Riwayat Kehadiran Saya</h3></div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table">
+                  <thead><tr><th>Kegiatan</th><th>Waktu</th><th>Status</th><th>Metode</th></tr></thead>
+                  <tbody id="attHistoryBody">
+                    <tr><td colspan="4" style="text-align:center;color:#999;padding:30px;">Memuat...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Session Tab (Admin) -->
+        <div class="admin-tab" id="tab-create">
+          <div class="card" style="max-width:600px;">
+            <div class="card-header"><h3><i class="fas fa-plus-circle"></i> Buat Sesi Absensi Baru</h3></div>
+            <div class="card-body">
+              <form onsubmit="createSession(event)">
+                <div class="form-group">
+                  <label class="form-label">Nama Kegiatan</label>
+                  <input type="text" id="sessionName" class="form-input" placeholder="Contoh: Latihan Rutin Minggu 1" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Deskripsi</label>
+                  <textarea id="sessionDesc" class="form-input" rows="3" placeholder="Deskripsi kegiatan..."></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Tanggal</label>
+                    <input type="date" id="sessionDate" class="form-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Berlaku (jam)</label>
+                    <select id="sessionExpiry" class="form-input">
+                      <option value="2">2 Jam</option>
+                      <option value="4">4 Jam</option>
+                      <option value="8">8 Jam</option>
+                      <option value="12">12 Jam</option>
+                      <option value="24" selected>24 Jam</option>
+                    </select>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="createSessionBtn">
+                  <i class="fas fa-qrcode"></i> Buat Sesi & Generate QR
+                </button>
+              </form>
+
+              <div id="generatedQR" style="display:none;margin-top:30px;text-align:center;">
+                <h3 style="color:var(--primary);margin-bottom:15px;">QR Code Berhasil Dibuat!</h3>
+                <img id="qrCodeImg" src="" alt="QR Code" style="max-width:300px;border:3px solid var(--primary);border-radius:12px;padding:10px;background:white;">
+                <p id="qrSessionIdDisplay" style="margin-top:10px;font-weight:600;color:var(--text);font-size:14px;"></p>
+                <p style="color:#999;font-size:12px;margin-top:5px;">Bagikan QR Code ini kepada anggota untuk absensi</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Detail Modal -->
+  <div class="modal-overlay" id="sessionDetailModal">
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header">
+        <h3 id="sessionDetailTitle">Detail Sesi</h3>
+        <button class="modal-close" onclick="document.getElementById('sessionDetailModal').classList.remove('show')">&times;</button>
+      </div>
+      <div class="modal-body" id="sessionDetailBody">
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer"><div class="container"><div class="footer-bottom"><p>&copy; 2024 Pramuka SMPN 1 Leuwigoong</p></div></div></footer>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!AuthManager.isLoggedIn()) {
+      window.location.href = '/login.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var today = new Date().toISOString().split('T')[0];
+      var dateEl = document.getElementById('sessionDate');
+      if (dateEl) dateEl.value = today;
+      loadSessions();
+      loadMyHistory();
+    });
+
+    function switchAttTab(tab, btn) {
+      if (tab !== 'scan') stopCamera();
+      document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.getElementById('tab-' + tab).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    /* ════════════════════════════════════════
+       SCAN MODE SWITCHER
+    ════════════════════════════════════════ */
+    function setScanMode(mode) {
+      var isCamera = mode === 'camera';
+      document.getElementById('cameraModeSection').style.display = isCamera ? '' : 'none';
+      document.getElementById('manualModeSection').style.display  = isCamera ? 'none' : '';
+      document.getElementById('btnModeCamera').classList.toggle('active-mode', isCamera);
+      document.getElementById('btnModeManual').classList.toggle('active-mode', !isCamera);
+      if (!isCamera) stopCamera();
+    }
+
+    /* ════════════════════════════════════════
+       CAMERA QR SCANNER
+    ════════════════════════════════════════ */
+    var scanActive    = false;
+    var scanLock      = false;   // cegah double submit
+    var videoStream   = null;
+    var animFrameId   = null;
+    var facingMode    = 'environment'; // default kamera belakang
+    var hasMultipleCameras = false;
+
+    async function startCamera() {
+      document.getElementById('cameraIdle').style.display    = 'none';
+      document.getElementById('cameraSuccess').style.display = 'none';
+      document.getElementById('cameraError').style.display   = 'none';
+
+      try {
+        // Cek apakah ada kamera lebih dari 1
+        if (navigator.mediaDevices.enumerateDevices) {
+          var devices = await navigator.mediaDevices.enumerateDevices();
+          var cameras = devices.filter(function(d) { return d.kind === 'videoinput'; });
+          hasMultipleCameras = cameras.length > 1;
+        }
+
+        var stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+
+        videoStream = stream;
+        var video = document.getElementById('qrVideo');
+        video.srcObject = stream;
+        await video.play();
+
+        scanActive = true;
+        scanLock   = false;
+
+        document.getElementById('btnStartCamera').style.display = 'none';
+        document.getElementById('btnStopCamera').style.display  = '';
+        if (hasMultipleCameras) document.getElementById('btnFlipCamera').style.display = '';
+
+        setScanBadge('Kamera Aktif', '#43a047');
+        requestAnimationFrame(scanFrame);
+
+      } catch (err) {
+        console.error('Camera error:', err);
+        document.getElementById('cameraIdle').style.display = 'flex';
+        var msg = err.name === 'NotAllowedError'
+          ? 'Izin kamera ditolak. Aktifkan izin kamera di pengaturan browser.'
+          : err.name === 'NotFoundError'
+          ? 'Kamera tidak ditemukan di perangkat ini.'
+          : 'Gagal mengakses kamera: ' + err.message;
+        showToast(msg, 'error');
+        setScanBadge('', '');
+      }
+    }
+
+    function stopCamera() {
+      scanActive = false;
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      if (videoStream) {
+        videoStream.getTracks().forEach(function(t) { t.stop(); });
+        videoStream = null;
+      }
+      var video = document.getElementById('qrVideo');
+      video.srcObject = null;
+
+      document.getElementById('btnStartCamera').style.display = '';
+      document.getElementById('btnStopCamera').style.display  = 'none';
+      document.getElementById('btnFlipCamera').style.display  = 'none';
+      document.getElementById('cameraIdle').style.display     = 'flex';
+      setScanBadge('', '');
+    }
+
+    async function flipCamera() {
+      facingMode = facingMode === 'environment' ? 'user' : 'environment';
+      stopCamera();
+      setTimeout(startCamera, 300);
+    }
+
+    function scanFrame() {
+      if (!scanActive) return;
+      animFrameId = requestAnimationFrame(scanFrame);
+      if (scanLock) return;
+
+      var video  = document.getElementById('qrVideo');
+      var canvas = document.getElementById('qrCanvas');
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+
+      if (code && code.data) {
+        scanLock = true;
+        handleQRResult(code.data);
+      }
+    }
+
+    async function handleQRResult(rawData) {
+      setScanBadge('Memproses...', '#fb8c00');
+
+      // Parse JSON dari QR (format: { sessionId, name, date })
+      var sessionId = rawData;
+      try {
+        var parsed = JSON.parse(rawData);
+        if (parsed.sessionId) sessionId = parsed.sessionId;
+      } catch (e) { /* pakai rawData langsung */ }
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/attendance/check-in', {
+          method: 'POST',
+          body: JSON.stringify({ sessionId: sessionId, method: 'qr_camera' })
+        });
+        var data = await response.json();
+
+        if (response.ok) {
+          showScanResult('success', data.message || 'Absensi Berhasil! 🏕️');
+          setScanBadge('Berhasil ✓', '#43a047');
+          loadMyHistory();
+          // Auto resume scanner setelah 2.5 detik
+          setTimeout(resumeScanner, 2500);
+        } else {
+          showScanResult('error', data.error || 'Gagal absen');
+          setScanBadge('Gagal', '#e53935');
+        }
+      } catch (e) {
+        showScanResult('error', 'Gagal terhubung ke server');
+        setScanBadge('Error', '#e53935');
+      }
+    }
+
+    function showScanResult(type, message) {
+      var successEl = document.getElementById('cameraSuccess');
+      var errorEl   = document.getElementById('cameraError');
+      if (type === 'success') {
+        document.getElementById('successMsg').textContent = message;
+        successEl.style.display = 'flex';
+        errorEl.style.display   = 'none';
+        // Vibrate jika didukung (mobile)
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      } else {
+        document.getElementById('errorMsg').textContent = message;
+        errorEl.style.display   = 'flex';
+        successEl.style.display = 'none';
+      }
+    }
+
+    function resumeScanner() {
+      document.getElementById('cameraSuccess').style.display = 'none';
+      document.getElementById('cameraError').style.display   = 'none';
+      scanLock = false;
+      setScanBadge('Kamera Aktif', '#43a047');
+    }
+
+    function setScanBadge(text, color) {
+      var badge = document.getElementById('scanStatusBadge');
+      if (!text) { badge.style.display = 'none'; return; }
+      badge.textContent    = text;
+      badge.style.display  = '';
+      badge.style.background = color + '22';
+      badge.style.color      = color;
+      badge.style.border     = '1px solid ' + color + '55';
+    }
+
+    /* ════════════════════════════════════════
+       MANUAL CHECK-IN (mode input teks)
+    ════════════════════════════════════════ */
+    async function checkInManual() {
+      var sessionId = document.getElementById('qrSessionId').value.trim();
+      if (!sessionId) { showToast('Masukkan Session ID', 'warning'); return; }
+
+      try {
+        var parsed = JSON.parse(sessionId);
+        if (parsed.sessionId) sessionId = parsed.sessionId;
+      } catch (e) {}
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/attendance/check-in', {
+          method: 'POST',
+          body: JSON.stringify({ sessionId: sessionId, method: 'manual' })
+        });
+        var data = await response.json();
+        if (response.ok) {
+          showToast(data.message || 'Absensi berhasil!', 'success');
+          document.getElementById('qrSessionId').value = '';
+          loadMyHistory();
+        } else {
+          showToast(data.error || 'Gagal absen', 'error');
+        }
+      } catch (e) {
+        showToast('Gagal terhubung ke server', 'error');
+      }
+    }
+
+    async function loadSessions() {
+      var container = document.getElementById('sessionsContainer');
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/attendance/sessions');
+        var data = await response.json();
+
+        if (!data.sessions || data.sessions.length === 0) {
+          container.innerHTML = '<div class="empty-state"><h3>Belum Ada Sesi Absensi</h3><p>Belum ada kegiatan yang dibuat</p></div>';
+          return;
+        }
+
+        container.innerHTML = data.sessions.map(function(s) {
+          var statusClass = s.is_active ? 'active' : 'closed';
+          var statusText = s.is_active ? 'Aktif' : 'Ditutup';
+          return '<div class="session-card" onclick="viewSessionDetail(\'' + s.id + '\')" style="cursor:pointer;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:start;">' +
+              '<div>' +
+                '<h3>' + escapeHtml(s.name) + '</h3>' +
+                '<div class="session-meta">' +
+                  '<span><i class="fas fa-calendar"></i> ' + escapeHtml(s.date) + '</span>' +
+                  '<span><i class="fas fa-users"></i> ' + (s.total_attendance || 0) + ' hadir</span>' +
+                  '<span><i class="fas fa-user"></i> ' + escapeHtml(s.created_by_name || '') + '</span>' +
+                '</div>' +
+              '</div>' +
+              '<span class="session-status ' + statusClass + '">' + statusText + '</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="empty-state"><p>Gagal memuat sesi absensi</p></div>';
+      }
+    }
+
+    async function viewSessionDetail(sessionId) {
+      var modal = document.getElementById('sessionDetailModal');
+      var body = document.getElementById('sessionDetailBody');
+      modal.classList.add('show');
+      body.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/attendance/sessions/' + sessionId);
+        var data = await response.json();
+        var s = data.session;
+        var atts = data.attendances || [];
+
+        document.getElementById('sessionDetailTitle').textContent = s.name;
+
+        var qrHTML = s.qr_code ? '<div class="qr-display"><img src="' + s.qr_code + '" alt="QR Code"><p style="margin-top:10px;font-size:12px;color:#999;">Session ID: <strong>' + s.id + '</strong></p></div>' : '';
+
+        var tableHTML = '<div class="table-responsive"><table class="table"><thead><tr><th>No</th><th>Nama</th><th>Regu</th><th>Kelas</th><th>Waktu</th><th>Status</th></tr></thead><tbody>';
+
+        if (atts.length === 0) {
+          tableHTML += '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">Belum ada yang absen</td></tr>';
+        } else {
+          atts.forEach(function(a, i) {
+            tableHTML += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(a.display_name) + '</td><td>' + escapeHtml(a.regu || '-') + '</td><td>' + escapeHtml(a.kelas || '-') + '</td><td>' + formatDateTime(a.check_in_time) + '</td><td><span class="badge badge-success">HADIR</span></td></tr>';
+          });
+        }
+        tableHTML += '</tbody></table></div>';
+
+        var adminActions = AuthManager.isAdmin() ? '<div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">' +
+          '<a href="/api/admin/export/attendance/' + s.id + '" class="btn btn-success btn-sm" target="_blank"><i class="fas fa-file-excel"></i> Export Excel</a>' +
+          '<a href="/api/admin/export/attendance-pdf/' + s.id + '" class="btn btn-danger btn-sm" target="_blank"><i class="fas fa-file-pdf"></i> Export PDF</a>' +
+          (s.is_active ? '<button class="btn btn-warning btn-sm" onclick="closeSession(\'' + s.id + '\')"><i class="fas fa-lock"></i> Tutup Sesi</button>' : '') +
+        '</div>' : '';
+
+        body.innerHTML = qrHTML +
+          '<div style="margin:20px 0;"><strong>Tanggal:</strong> ' + escapeHtml(s.date) + ' | <strong>Total Hadir:</strong> ' + atts.length + '</div>' +
+          tableHTML + adminActions;
+      } catch (e) {
+        body.innerHTML = '<div class="empty-state"><p>Gagal memuat detail sesi</p></div>';
+      }
+    }
+
+    async function closeSession(id) {
+      if (!confirm('Tutup sesi absensi ini?')) return;
+      try {
+        await AuthManager.fetchWithAuth('/api/attendance/sessions/' + id + '/close', { method: 'PUT' });
+        showToast('Sesi ditutup', 'success');
+        document.getElementById('sessionDetailModal').classList.remove('show');
+        loadSessions();
+      } catch (e) {
+        showToast('Gagal', 'error');
+      }
+    }
+
+    async function loadMyHistory() {
+      var tbody = document.getElementById('attHistoryBody');
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/attendance/my-history');
+        var data = await response.json();
+
+        if (data.history.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:30px;">Belum ada riwayat kehadiran</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.history.map(function(a) {
+          var statusBadge = a.status === 'hadir' ? 'badge-success' : a.status === 'izin' ? 'badge-warning' : 'badge-danger';
+          return '<tr><td><strong>' + escapeHtml(a.session_name) + '</strong></td><td>' + formatDateTime(a.check_in_time) + '</td><td><span class="badge ' + statusBadge + '">' + a.status.toUpperCase() + '</span></td><td>' + escapeHtml(a.method) + '</td></tr>';
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;">Gagal memuat riwayat</td></tr>';
+      }
+    }
+
+    async function createSession(e) {
+      e.preventDefault();
+      var btn = document.getElementById('createSessionBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Membuat...';
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/attendance/sessions', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: document.getElementById('sessionName').value,
+            description: document.getElementById('sessionDesc').value,
+            date: document.getElementById('sessionDate').value,
+            expiresInHours: parseInt(document.getElementById('sessionExpiry').value)
+          })
+        });
+        var data = await response.json();
+
+        if (response.ok) {
+          showToast('Sesi absensi berhasil dibuat!', 'success');
+          var qrDiv = document.getElementById('generatedQR');
+          qrDiv.style.display = 'block';
+          document.getElementById('qrCodeImg').src = data.session.qr_code;
+          document.getElementById('qrSessionIdDisplay').textContent = 'Session ID: ' + data.session.id;
+          loadSessions();
+        } else {
+          showToast(data.error || 'Gagal', 'error');
+        }
+      } catch (e) {
+        showToast('Gagal', 'error');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-qrcode"></i> Buat Sesi & Generate QR';
+    }
+  </script>
+</body>
+</html>

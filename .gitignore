@@ -1,0 +1,53 @@
+# ── Environment & Secrets ─────────────────────────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# ── Database (sql.js — jangan di-commit ke git) ───────────
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ── Node.js ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ── Upload files user (besar, tidak perlu di git) ─────────
+public/uploads/
+!public/uploads/.gitkeep
+
+# ── Log files ─────────────────────────────────────────────
+logs/
+*.log
+
+# ── OS files ──────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Backup files ──────────────────────────────────────────
+*.bak
+*.backup
+news.js.bak
+
+# ── Build / dist ──────────────────────────────────────────
+dist/
+build/

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog & Postingan - Pramuka SMPN 1 Leuwigoong</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+          <img src="/images/logo_pramuka_smpn1.svg" alt="Logo Pramuka SMPN 1 Leuwigoong" class="nav-logo"/>
+        <div class="nav-brand-text"><span class="brand-title">PRAMUKA</span><span class="brand-subtitle">SMPN 1 Leuwigoong</span></div>
+      </a>
+      <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+      <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link"><i class="fas fa-home"></i> Beranda</a>
+        <a href="/news.html" class="nav-link"><i class="fas fa-newspaper"></i> Berita</a>
+        <a href="/posts.html" class="nav-link active"><i class="fas fa-pen-fancy"></i> Blog</a>
+        <a href="/attendance.html" class="nav-link auth-only" style="display:none;"><i class="fas fa-clipboard-check"></i> Absensi</a>
+         <a href="/game.html" class="nav-link auth-only"><i class="fas fa-gamepad"></i> Minigame</a>
+        <a href="/chat.html" class="nav-link auth-only" style="display:none;"><i class="fas fa-comments"></i> Chat</a>
+        <a href="/admin.html" class="nav-link admin-only" style="display:none;"><i class="fas fa-shield-alt"></i> Admin</a>
+      </div>
+      <div class="nav-actions">
+        <button class="notif-btn auth-only" id="notifBtn" style="display:none;"><i class="fas fa-bell"></i><span class="badge-notif" id="notifBadge" style="display:none;">0</span></button>
+        <div class="nav-user auth-only" id="navUser" style="display:none;">
+          <img src="" alt="" class="nav-avatar" id="navAvatar">
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile.html"><i class="fas fa-user"></i> Profil</a>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <hr><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+        <a href="/login.html" class="btn btn-login guest-only"><i class="fas fa-sign-in-alt"></i> Masuk</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header"><h3>Notifikasi</h3><button class="notif-mark-read" id="markAllRead">Tandai dibaca</button></div>
+    <div class="notif-list" id="notifList"><div class="notif-empty">Tidak ada notifikasi</div></div>
+  </div>
+
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;">
+        <div>
+          <h1><i class="fas fa-pen-fancy"></i> Blog & Postingan</h1>
+          <p>Cerita, pengalaman, dan dokumentasi kegiatan pramuka</p>
+        </div>
+        <button class="btn btn-secondary auth-only" style="display:none;" onclick="showCreatePost()">
+          <i class="fas fa-plus"></i> Buat Postingan
+        </button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="container">
+        <!-- Filters -->
+        <div class="tabs" id="postTabs">
+          <button class="tab-btn active" onclick="filterPosts('', this)">Semua</button>
+          <button class="tab-btn" onclick="filterPosts('blog', this)">Blog</button>
+          <button class="tab-btn" onclick="filterPosts('kegiatan', this)">Kegiatan</button>
+          <button class="tab-btn" onclick="filterPosts('pengumuman', this)">Pengumuman</button>
+          <button class="tab-btn" onclick="filterPosts('galeri', this)">Galeri</button>
+        </div>
+
+        <!-- Posts List View -->
+        <div id="postsListView">
+          <div class="posts-grid" id="postsGrid">
+            <div class="loading-spinner" style="grid-column:1/-1;">
+              <div class="spinner"></div><p>Memuat postingan...</p>
+            </div>
+          </div>
+          <div class="pagination" id="postsPagination"></div>
+        </div>
+
+        <!-- Single Post View -->
+        <div id="postDetailView" style="display:none;">
+          <button class="btn btn-outline-primary mb-3" onclick="showPostsList()">
+            <i class="fas fa-arrow-left"></i> Kembali
+          </button>
+          <div id="postDetailContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Post Modal -->
+  <div class="modal-overlay" id="createPostModal">
+    <div class="modal" style="max-width:650px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-pen-fancy"></i> Buat Postingan Baru</h3>
+        <button class="modal-close" onclick="closeModal('createPostModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="createPostForm" onsubmit="submitPost(event)">
+          <div class="form-group">
+            <label class="form-label">Judul</label>
+            <input type="text" id="postTitle" class="form-input" placeholder="Judul postingan..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kategori</label>
+            <select id="postCategory" class="form-input">
+              <option value="blog">Blog</option>
+              <option value="kegiatan">Kegiatan</option>
+              <option value="pengumuman">Pengumuman</option>
+              <option value="galeri">Galeri</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Konten</label>
+            <textarea id="postContent" class="form-input" rows="8" placeholder="Tulis konten postingan..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gambar (opsional)</label>
+            <input type="file" id="postImage" class="form-input" accept="image/*">
+            <div class="form-help">Format: JPG, PNG, WebP, SVG. Maks 10MB</div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="submitPostBtn">
+            <i class="fas fa-paper-plane"></i> Publikasikan
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container"><div class="footer-bottom"><p>&copy; 2024 Pramuka SMPN 1 Leuwigoong</p></div></div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    var currentPage = 1;
+    var currentCategory = '';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var params = new URLSearchParams(window.location.search);
+      var postId = params.get('id');
+      var isNew = params.get('new');
+
+      if (postId) {
+        loadPostDetail(postId);
+      } else {
+        loadPosts();
+      }
+
+      if (isNew && AuthManager.isLoggedIn()) {
+        setTimeout(showCreatePost, 500);
+      }
+    });
+
+    function filterPosts(category, btn) {
+      currentCategory = category;
+      currentPage = 1;
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      loadPosts();
+    }
+
+    async function loadPosts() {
+      var grid = document.getElementById('postsGrid');
+      grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div><p>Memuat...</p></div>';
+
+      document.getElementById('postsListView').style.display = 'block';
+      document.getElementById('postDetailView').style.display = 'none';
+
+      try {
+        var url = '/api/posts?page=' + currentPage + '&limit=9';
+        if (currentCategory) url += '&category=' + currentCategory;
+
+        var response = await fetch(url);
+        var data = await response.json();
+
+        if (data.posts.length === 0) {
+          grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">' +
+            '<svg viewBox="0 0 80 80"><rect x="10" y="10" width="60" height="60" rx="5" fill="#e8f5e9"/><rect x="20" y="20" width="40" height="5" rx="2" fill="#2d5016" opacity="0.2"/><rect x="20" y="30" width="30" height="4" rx="2" fill="#2d5016" opacity="0.15"/><rect x="20" y="38" width="35" height="4" rx="2" fill="#2d5016" opacity="0.15"/></svg>' +
+            '<h3>Belum Ada Postingan</h3>' +
+            '<p>Jadilah yang pertama membuat postingan!</p></div>';
+          document.getElementById('postsPagination').innerHTML = '';
+          return;
+        }
+
+        grid.innerHTML = data.posts.map(function(post) {
+          return createPostCardClickable(post);
+        }).join('');
+
+        // Pagination
+        var pagination = document.getElementById('postsPagination');
+        if (data.pagination.totalPages > 1) {
+          var btns = '';
+          for (var i = 1; i <= data.pagination.totalPages; i++) {
+            btns += '<button class="pagination-btn ' + (i === currentPage ? 'active' : '') + '" onclick="goToPage(' + i + ')">' + i + '</button>';
+          }
+          pagination.innerHTML = btns;
+        } else {
+          pagination.innerHTML = '';
+        }
+      } catch (e) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>Gagal memuat postingan</p></div>';
+      }
+    }
+
+    function createPostCardClickable(post) {
+      var imageHTML = '';
+      if (post.image_url) {
+        imageHTML = '<div class="post-image"><img src="' + escapeHtml(post.image_url) + '" alt="" loading="lazy"></div>';
+      } else {
+        imageHTML = '<div class="post-image-placeholder"><svg viewBox="0 0 80 80"><rect x="5" y="5" width="70" height="70" rx="5" fill="#c8e6c9"/><polygon points="40,15 50,35 62,35 52,45 56,60 40,50 24,60 28,45 18,35 30,35" fill="#2d5016" opacity="0.3"/></svg></div>';
+      }
+      var avatarSrc = post.author_photo || generateAvatarUrl(post.author_name || 'User');
+
+      return '<div class="post-card" onclick="loadPostDetail(' + post.id + ')" style="cursor:pointer;">' +
+        imageHTML +
+        '<div class="post-body">' +
+          '<span class="post-category">' + escapeHtml(post.category || 'blog') + '</span>' +
+          '<h3 class="post-title">' + escapeHtml(post.title) + '</h3>' +
+          '<p class="post-excerpt">' + escapeHtml(stripHtml(post.content).substring(0, 120)) + '</p>' +
+          '<div class="post-footer">' +
+            '<div class="post-author">' +
+              '<img src="' + avatarSrc + '" class="post-author-avatar">' +
+              '<span class="post-author-name">' + escapeHtml(post.author_name || 'Anonim') + '</span>' +
+            '</div>' +
+            '<div class="post-stats">' +
+              '<span><i class="fas fa-heart"></i> ' + (post.likes || 0) + '</span>' +
+              '<span><i class="fas fa-comment"></i> ' + (post.comment_count || 0) + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      loadPosts();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function loadPostDetail(id) {
+      document.getElementById('postsListView').style.display = 'none';
+      document.getElementById('postDetailView').style.display = 'block';
+      var container = document.getElementById('postDetailContent');
+      container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Memuat...</p></div>';
+
+      try {
+        var response = await fetch('/api/posts/' + id);
+        var data = await response.json();
+        var post = data.post;
+        var comments = data.comments || [];
+        var avatarSrc = post.author_photo || generateAvatarUrl(post.author_name || 'User');
+
+        var imageHTML = post.image_url ? '<img src="' + escapeHtml(post.image_url) + '" alt="" style="width:100%;border-radius:12px;margin-bottom:20px;max-height:500px;object-fit:cover;">' : '';
+
+        var commentsHTML = comments.map(function(c) {
+          var cAvatar = c.photo_url || generateAvatarUrl(c.display_name || 'User');
+          return '<div style="display:flex;gap:12px;padding:15px 0;border-bottom:1px solid #f0f0f0;">' +
+            '<img src="' + cAvatar + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">' +
+            '<div><strong style="font-size:14px;">' + escapeHtml(c.display_name) + '</strong>' +
+            '<span style="font-size:11px;color:#999;margin-left:8px;">' + formatTimeAgo(c.created_at) + '</span>' +
+            '<p style="font-size:14px;margin-top:4px;color:#555;">' + escapeHtml(c.content) + '</p></div></div>';
+        }).join('');
+
+        var commentForm = AuthManager.isLoggedIn() ?
+          '<form onsubmit="submitComment(event, ' + post.id + ')" style="margin-top:20px;">' +
+            '<div class="form-group"><textarea id="commentContent" class="form-input" rows="3" placeholder="Tulis komentar..." required></textarea></div>' +
+            '<button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i> Kirim Komentar</button>' +
+          '</form>' :
+          '<p style="margin-top:20px;color:#999;font-size:14px;"><a href="/login.html" style="color:var(--primary);font-weight:600;">Login</a> untuk berkomentar</p>';
+
+        container.innerHTML = '<div class="card">' +
+          '<div class="card-body" style="padding:30px;">' +
+            imageHTML +
+            '<span class="post-category">' + escapeHtml(post.category) + '</span>' +
+            '<h1 style="font-size:28px;font-weight:800;margin:10px 0 15px;color:var(--text);">' + escapeHtml(post.title) + '</h1>' +
+            '<div style="display:flex;align-items:center;gap:12px;margin-bottom:25px;padding-bottom:20px;border-bottom:1px solid #eee;">' +
+              '<img src="' + avatarSrc + '" style="width:42px;height:42px;border-radius:50%;">' +
+              '<div><strong>' + escapeHtml(post.author_name) + '</strong><br><span style="font-size:12px;color:#999;">' + formatDate(post.created_at) + '</span></div>' +
+              '<div style="margin-left:auto;display:flex;gap:15px;">' +
+                '<button class="btn btn-sm btn-outline-primary" onclick="likePost(' + post.id + ')"><i class="fas fa-heart"></i> <span id="likeCount">' + (post.likes || 0) + '</span></button>' +
+              '</div>' +
+            '</div>' +
+            '<div style="font-size:15px;line-height:1.9;color:#444;white-space:pre-wrap;">' + escapeHtml(post.content) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="card mt-3">' +
+          '<div class="card-header"><h3><i class="fas fa-comments"></i> Komentar (' + comments.length + ')</h3></div>' +
+          '<div class="card-body">' +
+            (commentsHTML || '<p style="color:#999;">Belum ada komentar</p>') +
+            commentForm +
+          '</div>' +
+        '</div>';
+
+      } catch (e) {
+        container.innerHTML = '<div class="empty-state"><h3>Post tidak ditemukan</h3></div>';
+      }
+    }
+
+    function showPostsList() {
+      document.getElementById('postsListView').style.display = 'block';
+      document.getElementById('postDetailView').style.display = 'none';
+      history.pushState(null, '', '/posts.html');
+    }
+
+    function showCreatePost() {
+      if (!AuthManager.isLoggedIn()) {
+        showToast('Silakan login terlebih dahulu', 'warning');
+        window.location.href = '/login.html';
+        return;
+      }
+      document.getElementById('createPostModal').classList.add('show');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    async function submitPost(e) {
+      e.preventDefault();
+      var btn = document.getElementById('submitPostBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mempublikasikan...';
+
+      var formData = new FormData();
+      formData.append('title', document.getElementById('postTitle').value);
+      formData.append('content', document.getElementById('postContent').value);
+      formData.append('category', document.getElementById('postCategory').value);
+
+      var imageFile = document.getElementById('postImage').files[0];
+      if (imageFile) formData.append('image', imageFile);
+
+      try {
+        var response = await fetch('/api/posts', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + AuthManager.getToken() },
+          body: formData
+        });
+
+        var data = await response.json();
+
+        if (response.ok) {
+          showToast('Postingan berhasil dipublikasikan!', 'success');
+          closeModal('createPostModal');
+          document.getElementById('createPostForm').reset();
+          loadPosts();
+        } else {
+          showToast(data.error || 'Gagal membuat postingan', 'error');
+        }
+      } catch (err) {
+        showToast('Gagal terhubung ke server', 'error');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Publikasikan';
+    }
+
+    async function likePost(id) {
+      if (!AuthManager.isLoggedIn()) {
+        showToast('Login untuk menyukai postingan', 'warning');
+        return;
+      }
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/posts/' + id + '/like', { method: 'POST' });
+        var data = await response.json();
+        var el = document.getElementById('likeCount');
+        if (el) el.textContent = data.likes;
+        showToast('Kamu menyukai postingan ini!', 'success');
+      } catch (e) {
+        showToast('Gagal', 'error');
+      }
+    }
+
+    async function submitComment(e, postId) {
+      e.preventDefault();
+      var content = document.getElementById('commentContent').value.trim();
+      if (!content) return;
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/posts/' + postId + '/comments', {
+          method: 'POST',
+          body: JSON.stringify({ content: content })
+        });
+
+        var data = await response.json();
+        if (response.ok) {
+          showToast('Komentar berhasil ditambahkan!', 'success');
+          loadPostDetail(postId);
+        } else {
+          showToast(data.error || 'Gagal mengirim komentar', 'error');
+        }
+      } catch (e) {
+        showToast('Gagal', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

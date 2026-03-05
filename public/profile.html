@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profil - Pramuka SMPN 1 Leuwigoong</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <style>
+    /* ── Profile Header ── */
+    .profile-header {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
+      padding: 50px 0 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .profile-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* Avatar wrapper — clickable */
+    .profile-avatar-wrapper {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+    .profile-avatar-wrapper:hover .avatar-overlay { opacity: 1; }
+
+    .profile-avatar,
+    .profile-avatar-placeholder {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 4px solid #ffc107;
+      box-shadow: 0 0 0 4px rgba(255,193,7,0.2), 0 8px 30px rgba(0,0,0,0.3);
+      object-fit: cover;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      font-weight: 700;
+      color: #ffc107;
+    }
+
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      gap: 4px;
+      border: 4px solid #ffc107;
+    }
+    .avatar-overlay i { color: white; font-size: 22px; }
+    .avatar-overlay span { color: white; font-size: 10px; font-weight: 600; }
+
+    .profile-name {
+      font-size: 24px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 6px;
+    }
+    .profile-role {
+      display: inline-block;
+      background: rgba(255,193,7,0.2);
+      color: #ffc107;
+      border: 1px solid rgba(255,193,7,0.4);
+      border-radius: 999px;
+      padding: 4px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .profile-meta {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 16px;
+    }
+    .profile-meta-item {
+      text-align: center;
+      color: rgba(255,255,255,0.75);
+      font-size: 12px;
+    }
+    .profile-meta-item strong {
+      display: block;
+      font-size: 18px;
+      color: #ffc107;
+      font-weight: 700;
+    }
+
+    /* ── Content wrapper ── */
+    .profile-content {
+      max-width: 720px;
+      margin: -40px auto 60px;
+      padding: 0 16px;
+      position: relative;
+      z-index: 2;
+    }
+    .profile-card {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      padding: 28px;
+      border: 1px solid var(--border-light);
+    }
+
+    /* ── Info grid ── */
+    .profile-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .profile-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 14px 16px;
+      background: var(--bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border-light);
+    }
+    .profile-info-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .profile-info-label i { margin-right: 5px; color: var(--primary-light); }
+    .profile-info-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    /* ── Photo upload progress ── */
+    .photo-upload-progress {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px 14px;
+      background: var(--primary-soft);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--primary);
+    }
+    .photo-upload-progress.show { display: flex; }
+
+    /* Password strength */
+    .pwd-strength { margin-top: 6px; }
+    .pwd-strength-bar {
+      height: 4px;
+      border-radius: 4px;
+      background: var(--border);
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .pwd-strength-fill {
+      height: 100%;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+    .pwd-strength-text { font-size: 11px; color: var(--text-muted); }
+
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap .form-input { padding-right: 44px; }
+    .input-toggle-pw {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+    }
+    .input-toggle-pw:hover { color: var(--primary); }
+
+    .form-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+
+    @media (max-width: 600px) {
+      .profile-info-grid { grid-template-columns: 1fr; }
+      .profile-card { padding: 20px 16px; }
+      .profile-avatar, .profile-avatar-placeholder { width: 90px; height: 90px; font-size: 32px; }
+      .profile-meta { gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <img src="/images/logo_pramuka_smpn1.svg" alt="Logo" class="nav-logo"/>
+        <div class="nav-brand-text"><span class="brand-title">PRAMUKA</span><span class="brand-subtitle">SMPN 1 Leuwigoong</span></div>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link"><i class="fas fa-home"></i> Beranda</a>
+        <a href="/news.html" class="nav-link"><i class="fas fa-newspaper"></i> Berita</a>
+        <a href="/posts.html" class="nav-link"><i class="fas fa-pen-fancy"></i> Blog</a>
+        <a href="/attendance.html" class="nav-link"><i class="fas fa-clipboard-check"></i> Absensi</a>
+         <a href="/game.html" class="nav-link auth-only"><i class="fas fa-gamepad"></i> Minigame</a>
+        <a href="/chat.html" class="nav-link"><i class="fas fa-comments"></i> Chat</a>
+        <a href="/admin.html" class="nav-link admin-only" style="display:none;"><i class="fas fa-shield-alt"></i> Admin</a>
+      </div>
+      <div class="nav-actions">
+        <button class="notif-btn" id="notifBtn"><i class="fas fa-bell"></i><span class="badge-notif" id="notifBadge" style="display:none;">0</span></button>
+        <div class="nav-user" id="navUser">
+          <img src="" alt="" class="nav-avatar" id="navAvatar">
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile.html"><i class="fas fa-user"></i> Profil</a>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <hr><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header"><h3>Notifikasi</h3><button class="notif-mark-read" id="markAllRead">Tandai dibaca</button></div>
+    <div class="notif-list" id="notifList"><div class="notif-empty">Tidak ada notifikasi</div></div>
+  </div>
+
+  <!-- Hidden file input -->
+  <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;">
+
+  <div class="page-wrapper">
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="container">
+        <div class="profile-avatar-wrapper" id="avatarWrapper" title="Klik untuk ganti foto">
+          <div class="profile-avatar-placeholder" id="profileAvatarDisplay">?</div>
+          <div class="avatar-overlay" id="avatarOverlay">
+            <i class="fas fa-camera"></i>
+            <span>Ganti Foto</span>
+          </div>
+        </div>
+
+        <div class="photo-upload-progress" id="photoProgress">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Mengupload foto...</span>
+        </div>
+
+        <h1 class="profile-name" id="profileName">-</h1>
+        <span class="profile-role" id="profileRole">Anggota</span>
+        <div class="profile-meta" id="profileMeta"></div>
+      </div>
+    </div>
+
+    <!-- Tabs & Content -->
+    <div class="profile-content">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchProfileTab('info', this)"><i class="fas fa-user"></i> Info Profil</button>
+        <button class="tab-btn" onclick="switchProfileTab('edit', this)"><i class="fas fa-edit"></i> Edit Profil</button>
+        <button class="tab-btn" onclick="switchProfileTab('password', this)"><i class="fas fa-lock"></i> Ubah Password</button>
+      </div>
+
+      <!-- ── Tab Info ── -->
+      <div class="admin-tab active" id="tab-info">
+        <div class="profile-card">
+          <div class="profile-info-grid" id="profileInfoGrid">
+            <div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div></div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-outline-sm" onclick="switchProfileTab('edit', document.querySelectorAll('.tab-btn')[1])">
+              <i class="fas fa-edit"></i> Edit Profil
+            </button>
+            <button class="btn btn-outline-sm" id="removePhotoBtn" style="display:none;color:var(--danger);border-color:var(--danger);" onclick="removePhoto()">
+              <i class="fas fa-trash"></i> Hapus Foto
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Tab Edit ── -->
+      <div class="admin-tab" id="tab-edit">
+        <div class="profile-card">
+          <h3 style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:20px;"><i class="fas fa-edit"></i> Edit Profil</h3>
+          <form id="editProfileForm" onsubmit="updateProfile(event)">
+            <div class="form-group">
+              <label class="form-label">Nama Lengkap <span style="color:red">*</span></label>
+              <input type="text" id="editName" class="form-input" required placeholder="Nama lengkap kamu">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Regu</label>
+                <select id="editRegu" class="form-input">
+                  <option value="">-- Pilih Regu --</option>
+                  <option value="Garuda">Garuda</option>
+                  <option value="Elang">Elang</option>
+                  <option value="Rajawali">Rajawali</option>
+                  <option value="Cendrawasih">Cendrawasih</option>
+                  <option value="Mawar">Mawar</option>
+                  <option value="Melati">Melati</option>
+                  <option value="Anggrek">Anggrek</option>
+                  <option value="Dahlia">Dahlia</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kelas</label>
+                <select id="editKelas" class="form-input">
+                  <option value="">-- Pilih Kelas --</option>
+                  <option value="7A">7A</option><option value="7B">7B</option>
+                  <option value="7C">7C</option><option value="7D">7D</option>
+                  <option value="8A">8A</option><option value="8B">8B</option>
+                  <option value="8C">8C</option><option value="8D">8D</option>
+                  <option value="9A">9A</option><option value="9B">9B</option>
+                  <option value="9C">9C</option><option value="9D">9D</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">No HP / WhatsApp</label>
+              <input type="tel" id="editHP" class="form-input" placeholder="08xxxxxxxxxx">
+              <p class="form-hint"><i class="fas fa-info-circle"></i> Digunakan untuk keperluan komunikasi Pramuka</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Alamat</label>
+              <textarea id="editAlamat" class="form-input" rows="3" placeholder="Alamat lengkap..."></textarea>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button type="submit" class="btn btn-primary" id="saveProfileBtn">
+                <i class="fas fa-save"></i> Simpan Perubahan
+              </button>
+              <button type="button" class="btn btn-outline-sm" onclick="loadProfile()">
+                <i class="fas fa-undo"></i> Reset
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── Tab Password ── -->
+      <div class="admin-tab" id="tab-password">
+        <div class="profile-card" style="max-width:480px;">
+          <h3 style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:6px;"><i class="fas fa-lock"></i> Ubah Password</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Pastikan kamu ingat password baru setelah disimpan.</p>
+
+          <form id="changePasswordForm" onsubmit="changePassword(event)" autocomplete="off">
+            <div class="form-group">
+              <label class="form-label">Password Lama</label>
+              <div class="input-icon-wrap">
+                <input type="password" id="oldPassword" class="form-input" placeholder="Masukkan password lama" autocomplete="current-password">
+                <button type="button" class="input-toggle-pw" onclick="togglePw('oldPassword', this)"><i class="fas fa-eye"></i></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password Baru <span style="color:red">*</span></label>
+              <div class="input-icon-wrap">
+                <input type="password" id="newPassword" class="form-input" placeholder="Minimal 6 karakter" required minlength="6" oninput="checkPwdStrength(this.value)" autocomplete="new-password">
+                <button type="button" class="input-toggle-pw" onclick="togglePw('newPassword', this)"><i class="fas fa-eye"></i></button>
+              </div>
+              <div class="pwd-strength">
+                <div class="pwd-strength-bar"><div class="pwd-strength-fill" id="pwdStrengthFill"></div></div>
+                <span class="pwd-strength-text" id="pwdStrengthText"></span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Konfirmasi Password Baru <span style="color:red">*</span></label>
+              <div class="input-icon-wrap">
+                <input type="password" id="confirmNewPassword" class="form-input" placeholder="Ulangi password baru" required autocomplete="new-password">
+                <button type="button" class="input-toggle-pw" onclick="togglePw('confirmNewPassword', this)"><i class="fas fa-eye"></i></button>
+              </div>
+              <p class="form-hint" id="pwdMatchHint"></p>
+            </div>
+            <button type="submit" class="btn btn-primary" id="changePwdBtn">
+              <i class="fas fa-lock"></i> Ubah Password
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer"><div class="container"><div class="footer-bottom"><p>&copy; 2024 Pramuka SMPN 1 Leuwigoong</p></div></div></footer>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!AuthManager.isLoggedIn()) { window.location.href = '/login.html'; }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      loadProfile();
+      setupPhotoUpload();
+      setupConfirmCheck();
+    });
+
+    /* ─── Load Profile ─── */
+    async function loadProfile() {
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/auth/me');
+        var data = await response.json();
+        if (!response.ok) { showToast(data.error || 'Gagal memuat profil', 'error'); return; }
+        var user = data.user;
+
+        document.getElementById('profileName').textContent = user.display_name || '-';
+        document.getElementById('profileRole').textContent =
+          user.role === 'admin' ? '🛡️ Administrator' :
+          user.role === 'pembina' ? '⭐ Pembina' : '🏕️ Anggota';
+
+        // Avatar
+        var wrapper = document.getElementById('profileAvatarDisplay');
+        if (user.photo_url) {
+          wrapper.outerHTML = '<img src="' + user.photo_url + '" class="profile-avatar" id="profileAvatarDisplay" onerror="this.outerHTML=\'<div class=&quot;profile-avatar-placeholder&quot; id=&quot;profileAvatarDisplay&quot;>' + (user.display_name||'?')[0].toUpperCase() + '</div>\'">';
+          document.getElementById('removePhotoBtn').style.display = '';
+        } else {
+          var el = document.getElementById('profileAvatarDisplay');
+          if (el.tagName === 'IMG') {
+            el.outerHTML = '<div class="profile-avatar-placeholder" id="profileAvatarDisplay">' + (user.display_name||'?')[0].toUpperCase() + '</div>';
+          } else {
+            el.textContent = (user.display_name||'?')[0].toUpperCase();
+          }
+          document.getElementById('removePhotoBtn').style.display = 'none';
+        }
+
+        // Meta stats
+        document.getElementById('profileMeta').innerHTML =
+          '<div class="profile-meta-item"><strong>' + (user.regu || '-') + '</strong>Regu</div>' +
+          '<div class="profile-meta-item"><strong>' + (user.kelas || '-') + '</strong>Kelas</div>';
+
+        // Info grid
+        var grid = document.getElementById('profileInfoGrid');
+        grid.innerHTML = [
+          { label: 'Email', value: user.email || '-', icon: 'fas fa-envelope' },
+          { label: 'Role', value: user.role || '-', icon: 'fas fa-shield-alt' },
+          { label: 'Regu', value: user.regu || '-', icon: 'fas fa-flag' },
+          { label: 'Kelas', value: user.kelas || '-', icon: 'fas fa-school' },
+          { label: 'No HP', value: user.no_hp || '-', icon: 'fas fa-phone' },
+          { label: 'Bergabung', value: formatDate(user.created_at), icon: 'fas fa-calendar' },
+          { label: 'Alamat', value: user.alamat || '-', icon: 'fas fa-map-marker-alt' },
+        ].map(function (item) {
+          return '<div class="profile-info-item">' +
+            '<span class="profile-info-label"><i class="' + item.icon + '"></i> ' + item.label + '</span>' +
+            '<span class="profile-info-value">' + escapeHtml(String(item.value)) + '</span>' +
+          '</div>';
+        }).join('');
+
+        // Fill edit form
+        document.getElementById('editName').value  = user.display_name || '';
+        document.getElementById('editRegu').value  = user.regu || '';
+        document.getElementById('editKelas').value = user.kelas || '';
+        document.getElementById('editHP').value    = user.no_hp || '';
+        document.getElementById('editAlamat').value = user.alamat || '';
+      } catch (e) {
+        showToast('Gagal memuat profil', 'error');
+      }
+    }
+
+    /* ─── Photo Upload ─── */
+    function setupPhotoUpload() {
+      var wrapper = document.getElementById('avatarWrapper');
+      var fileInput = document.getElementById('photoFileInput');
+
+      wrapper.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function () {
+        if (!fileInput.files || !fileInput.files[0]) return;
+        var file = fileInput.files[0];
+        if (file.size > 3 * 1024 * 1024) {
+          showToast('Ukuran file maksimal 3MB', 'error');
+          fileInput.value = '';
+          return;
+        }
+        uploadPhoto(file);
+      });
+    }
+
+    async function uploadPhoto(file) {
+      var progress = document.getElementById('photoProgress');
+      progress.classList.add('show');
+
+      try {
+        var formData = new FormData();
+        formData.append('photo', file);
+
+        var token = AuthManager.getToken();
+        var response = await fetch('/api/auth/upload-photo', {
+          method: 'POST',
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+          body: formData
+        });
+        var data = await response.json();
+
+        if (response.ok) {
+          showToast('Foto profil berhasil diupdate! 📸', 'success');
+          AuthManager.setUser(data.user);
+          loadProfile();
+          AuthManager.updateUI();
+        } else {
+          showToast(data.error || 'Upload gagal', 'error');
+        }
+      } catch (e) {
+        showToast('Gagal terhubung ke server', 'error');
+      } finally {
+        progress.classList.remove('show');
+        document.getElementById('photoFileInput').value = '';
+      }
+    }
+
+    async function removePhoto() {
+      if (!confirm('Hapus foto profil dan kembali ke avatar default?')) return;
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/auth/photo', { method: 'DELETE' });
+        var data = await response.json();
+        if (response.ok) {
+          showToast('Foto profil dihapus', 'success');
+          loadProfile();
+          AuthManager.updateUI();
+        } else {
+          showToast(data.error || 'Gagal', 'error');
+        }
+      } catch (e) {
+        showToast('Gagal', 'error');
+      }
+    }
+
+    /* ─── Update Profile ─── */
+    async function updateProfile(e) {
+      e.preventDefault();
+      var btn = document.getElementById('saveProfileBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/auth/profile', {
+          method: 'PUT',
+          body: JSON.stringify({
+            displayName: document.getElementById('editName').value.trim(),
+            regu:   document.getElementById('editRegu').value,
+            kelas:  document.getElementById('editKelas').value,
+            noHp:   document.getElementById('editHP').value.trim(),
+            alamat: document.getElementById('editAlamat').value.trim()
+          })
+        });
+        var data = await response.json();
+        if (response.ok) {
+          AuthManager.setUser(data.user);
+          showToast('Profil berhasil diupdate! ✅', 'success');
+          loadProfile();
+          AuthManager.updateUI();
+        } else {
+          showToast(data.error || 'Gagal menyimpan profil', 'error');
+        }
+      } catch (e) {
+        showToast('Gagal terhubung ke server', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan';
+      }
+    }
+
+    /* ─── Change Password ─── */
+    async function changePassword(e) {
+      e.preventDefault();
+      var newPwd     = document.getElementById('newPassword').value;
+      var confirmPwd = document.getElementById('confirmNewPassword').value;
+      var oldPwd     = document.getElementById('oldPassword').value;
+
+      if (newPwd.length < 6) { showToast('Password baru minimal 6 karakter', 'error'); return; }
+      if (newPwd !== confirmPwd) { showToast('Konfirmasi password tidak cocok', 'error'); return; }
+
+      var btn = document.getElementById('changePwdBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/auth/change-password', {
+          method: 'PUT',
+          body: JSON.stringify({
+            currentPassword: oldPwd,
+            newPassword: newPwd
+          })
+        });
+        var data = await response.json();
+
+        if (response.ok) {
+          showToast('Password berhasil diubah! 🔒', 'success');
+          document.getElementById('changePasswordForm').reset();
+          document.getElementById('pwdStrengthFill').style.width = '0%';
+          document.getElementById('pwdStrengthText').textContent = '';
+          document.getElementById('pwdMatchHint').textContent = '';
+        } else {
+          showToast(data.error || 'Gagal mengubah password', 'error');
+        }
+      } catch (e) {
+        showToast('Gagal terhubung ke server', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Ubah Password';
+      }
+    }
+
+    /* ─── Password Strength ─── */
+    function checkPwdStrength(pwd) {
+      var fill = document.getElementById('pwdStrengthFill');
+      var text = document.getElementById('pwdStrengthText');
+      if (!pwd) { fill.style.width = '0%'; text.textContent = ''; return; }
+      var score = 0;
+      if (pwd.length >= 6)  score++;
+      if (pwd.length >= 10) score++;
+      if (/[A-Z]/.test(pwd)) score++;
+      if (/[0-9]/.test(pwd)) score++;
+      if (/[^A-Za-z0-9]/.test(pwd)) score++;
+      var levels = [
+        { label: '',           color: '',         w: '0%'   },
+        { label: 'Sangat Lemah', color: '#ef5350', w: '20%' },
+        { label: 'Lemah',        color: '#ff7043', w: '40%' },
+        { label: 'Cukup',        color: '#ffa726', w: '60%' },
+        { label: 'Kuat',         color: '#66bb6a', w: '80%' },
+        { label: 'Sangat Kuat',  color: '#43a047', w: '100%'}
+      ];
+      var l = levels[Math.min(score, 5)];
+      fill.style.width = l.w;
+      fill.style.background = l.color;
+      text.textContent = l.label;
+      text.style.color = l.color;
+    }
+
+    /* ─── Konfirmasi password match hint ─── */
+    function setupConfirmCheck() {
+      var confirmEl = document.getElementById('confirmNewPassword');
+      confirmEl.addEventListener('input', function () {
+        var hint = document.getElementById('pwdMatchHint');
+        var newPwd = document.getElementById('newPassword').value;
+        if (!this.value) { hint.textContent = ''; return; }
+        if (this.value === newPwd) {
+          hint.innerHTML = '<i class="fas fa-check" style="color:#43a047"></i> Password cocok';
+          hint.style.color = '#43a047';
+        } else {
+          hint.innerHTML = '<i class="fas fa-times" style="color:#ef5350"></i> Password tidak cocok';
+          hint.style.color = '#ef5350';
+        }
+      });
+    }
+
+    /* ─── Toggle show/hide password ─── */
+    function togglePw(inputId, btn) {
+      var input = document.getElementById(inputId);
+      var icon  = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    }
+
+    /* ─── Tab switcher ─── */
+    function switchProfileTab(tab, btn) {
+      document.querySelectorAll('.admin-tab').forEach(function (t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.getElementById('tab-' + tab).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+  </script>
+</body>
+</html>

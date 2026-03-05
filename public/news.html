@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Berita Pramuka - SMPN 1 Leuwigoong</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <nav class=bar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+         <img src="/images/logo_pramuka_smpn1.svg" alt="Logo Pramuka SMPN 1 Leuwigoong" class="nav-logo"/>
+        <div class="nav-brand-text">
+          <span class="brand-title">PRAMUKA</span>
+          <span class="brand-subtitle">SMPN 1 Leuwigoong</span>
+        </div>
+      </a>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link">
+          <i class="fas fa-home"></i> Beranda
+        </a>
+        <a href="/news.html" class="nav-link active">
+          <i class="fas fa-newspaper"></i> Berita
+        </a>
+        <a href="/posts.html" class="nav-link">
+          <i class="fas fa-pen-fancy"></i> Blog
+        </a>
+        <a href="/attendance.html" class="nav-link auth-only" style="display:none;">
+          <i class="fas fa-clipboard-check"></i> Absensi
+        </a>
+         <a href="/game.html" class="nav-link auth-only"><i class="fas fa-gamepad"></i> Minigame</a>
+        <a href="/chat.html" class="nav-link auth-only" style="display:none;">
+          <i class="fas fa-comments"></i> Chat
+          <span class="badge-notif" id="chatBadge" style="display:none;">0</span>
+        </a>
+        <a href="/admin.html" class="nav-link admin-only" style="display:none;">
+          <i class="fas fa-shield-alt"></i> Admin
+        </a>
+      </div>
+
+      <div class="nav-actions">
+        <button class="notif-btn auth-only" id="notifBtn" style="display:none;" title="Notifikasi">
+          <i class="fas fa-bell"></i>
+          <span class="badge-notif" id="notifBadge" style="display:none;">0</span>
+        </button>
+        <div class="nav-user auth-only" id="navUser" style="display:none;">
+          <img src="" alt="" class="nav-avatar" id="navAvatar">
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile.html"><i class="fas fa-user"></i> Profil Saya</a>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <hr>
+            <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+        <a href="/login.html" class="btn btn-login guest-only" id="loginBtn">
+          <i class="fas fa-sign-in-alt"></i> Masuk
+        </a>
+      </div>
+    </div>
+  <div class="nav-overlay" id="navOverlay"></div>
+  <div class="nav-menu" id="navMenu">
+    <a href="/" class="nav-link"><i class="fas fa-home"></i> Beranda</a>
+    <a href="/news.html" class="nav-link active"><i class="fas fa-newspaper"></i> Berita</a>
+    <a href="/posts.html" class="nav-link"><i class="fas fa-pen-fancy"></i> Blog</a>
+    <a href="/attendance.html" class="nav-link auth-only" style="display:none;"><i class="fas fa-clipboard-check"></i> Absensi</a>
+     <a href="/game.html" class="nav-link auth-only"><i class="fas fa-gamepad"></i> Minigame</a>
+    <a href="/chat.html" class="nav-link auth-only" style="display:none;"><i class="fas fa-comments"></i> Chat</a>
+    <a href="/admin.html" class="nav-link admin-only" style="display:none;"><i class="fas fa-shield-alt"></i> Admin</a>
+  </div>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header"><h3>Notifikasi</h3><button class="notif-mark-read" id="markAllRead">Tandai dibaca</button></div>
+    <div class="notif-list" id="notifList"><div class="notif-empty">Tidak ada notifikasi</div></div>
+  </div>
+</nav>
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h1><i class="fas fa-newspaper"></i> Berita Pramuka</h1>
+          <p id="newsSubtitle">Memuat berita terbaru...</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="refreshBtn" onclick="refreshNews()">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="container">
+        <!-- Source info -->
+        <div id="sourceInfo" style="margin-bottom:16px;"></div>
+
+        <!-- News grid -->
+        <div class="news-grid" id="newsGrid">
+          <div class="loading-spinner" style="grid-column:1/-1;">
+            <div class="spinner"></div>
+            <p>Mengambil berita terbaru...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container"><div class="footer-bottom"><p>&copy; 2026 Pramuka SMPN 1 Leuwigoong</p></div></div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      loadNews();
+    });
+
+    async function loadNews() {
+      var grid = document.getElementById('newsGrid');
+      var subtitle = document.getElementById('newsSubtitle');
+      var sourceDiv = document.getElementById('sourceInfo');
+
+      grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div><p>Mengambil berita terbaru...</p></div>';
+
+      try {
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
+
+        var response = await fetch('/api/news', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error('Server error');
+
+        var data = await response.json();
+
+        if (!data.news || data.news.length === 0) {
+          grid.innerHTML = emptyState();
+          subtitle.textContent = 'Tidak ada berita';
+          sourceDiv.innerHTML = '';
+          return;
+        }
+
+        // Update subtitle
+        subtitle.textContent = data.total + ' berita tersedia';
+
+        // Source badge
+        var srcLabel = '';
+        if (data.source === 'live') {
+          srcLabel = '<span class="badge badge-success" style="font-size:11px;padding:4px 12px;"><i class="fas fa-wifi" style="margin-right:4px;"></i> Live - ' + data.total + ' berita dari berbagai sumber</span>';
+        } else if (data.source === 'cache') {
+          srcLabel = '<span class="badge badge-info" style="font-size:11px;padding:4px 12px;"><i class="fas fa-database" style="margin-right:4px;"></i> Cache - ' + data.total + ' berita tersimpan</span>';
+        } else if (data.source === 'old_cache') {
+          srcLabel = '<span class="badge badge-warning" style="font-size:11px;padding:4px 12px;"><i class="fas fa-clock" style="margin-right:4px;"></i> Cache lama</span>';
+        } else {
+          srcLabel = '<span class="badge badge-primary" style="font-size:11px;padding:4px 12px;"><i class="fas fa-bookmark" style="margin-right:4px;"></i> Berita Pramuka</span>';
+        }
+        sourceDiv.innerHTML = '<div style="text-align:center;">' + srcLabel + '</div>';
+
+        // Render cards
+        grid.innerHTML = data.news.map(function(news, i) {
+          return renderNewsCard(news, i);
+        }).join('');
+
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          // Timeout - show builtin
+          grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div><p>Koneksi lambat, memuat berita lokal...</p></div>';
+          setTimeout(loadBuiltinFallback, 500);
+        } else {
+          grid.innerHTML = emptyState();
+          subtitle.textContent = 'Gagal memuat berita';
+          sourceDiv.innerHTML = '';
+        }
+      }
+    }
+
+    async function loadBuiltinFallback() {
+      try {
+        var response = await fetch('/api/news');
+        var data = await response.json();
+        var grid = document.getElementById('newsGrid');
+        var subtitle = document.getElementById('newsSubtitle');
+        var sourceDiv = document.getElementById('sourceInfo');
+
+        if (data.news && data.news.length > 0) {
+          subtitle.textContent = data.news.length + ' berita';
+          sourceDiv.innerHTML = '<div style="text-align:center;"><span class="badge badge-primary" style="font-size:11px;padding:4px 12px;"><i class="fas fa-bookmark" style="margin-right:4px;"></i> Berita Pramuka</span></div>';
+          grid.innerHTML = data.news.map(function(n, i) { return renderNewsCard(n, i); }).join('');
+        } else {
+          grid.innerHTML = emptyState();
+        }
+      } catch (e) {
+        document.getElementById('newsGrid').innerHTML = emptyState();
+      }
+    }
+
+    async function refreshNews() {
+      var btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
+
+      var grid = document.getElementById('newsGrid');
+      grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div><p>Mengambil berita terbaru dari internet...</p></div>';
+
+      try {
+        // Force refresh
+        var refreshRes = await fetch('/api/news/refresh');
+        var refreshData = await refreshRes.json();
+
+        if (refreshData.count > 0) {
+          showToast('Berhasil memuat ' + refreshData.count + ' berita!', 'success');
+        } else {
+          showToast('Menggunakan berita tersimpan', 'info');
+        }
+      } catch (e) {
+        showToast('Gagal refresh, memuat data tersimpan', 'warning');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+
+      // Reload with fresh data
+      try {
+        var response = await fetch('/api/news?refresh=1');
+        var data = await response.json();
+
+        if (data.news && data.news.length > 0) {
+          document.getElementById('newsSubtitle').textContent = data.total + ' berita';
+
+          var srcLabel = data.source === 'live'
+            ? '<span class="badge badge-success" style="font-size:11px;padding:4px 12px;"><i class="fas fa-wifi" style="margin-right:4px;"></i> Live - ' + data.total + ' berita</span>'
+            : '<span class="badge badge-primary" style="font-size:11px;padding:4px 12px;"><i class="fas fa-bookmark" style="margin-right:4px;"></i> Berita Pramuka</span>';
+
+          document.getElementById('sourceInfo').innerHTML = '<div style="text-align:center;">' + srcLabel + '</div>';
+          grid.innerHTML = data.news.map(function(n, i) { return renderNewsCard(n, i); }).join('');
+        } else {
+          loadNews();
+        }
+      } catch (e) {
+        loadNews();
+      }
+    }
+
+    function renderNewsCard(news, index) {
+      var imgHTML = '';
+      if (news.image_url) {
+        imgHTML = '<div class="news-card-image"><img src="' + escapeHtml(news.image_url) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'' + placeholderSVG(index) + '\'"></div>';
+      } else {
+        imgHTML = '<div class="news-card-image">' + placeholderSVG(index) + '</div>';
+      }
+
+      var timeStr = '';
+      try {
+        if (news.published_at) timeStr = formatTimeAgo(news.published_at);
+      } catch(e) {}
+
+      return '<a href="' + escapeHtml(news.url || '#') + '" target="_blank" rel="noopener noreferrer" class="news-card">' +
+        imgHTML +
+        '<div class="news-card-body">' +
+          '<div class="news-source"><i class="fas fa-globe"></i> ' + escapeHtml(news.source || 'Sumber') + '</div>' +
+          '<h3>' + escapeHtml(news.title || 'Tanpa Judul') + '</h3>' +
+          '<p>' + escapeHtml(news.description || '') + '</p>' +
+          (timeStr ? '<div class="news-card-footer"><i class="fas fa-clock"></i> ' + timeStr + '</div>' : '') +
+        '</div>' +
+      '</a>';
+    }
+
+    function placeholderSVG(i) {
+      var colors = ['#2e7d32','#1565c0','#e65100','#6a1b9a','#c62828','#00838f'];
+      var c = colors[i % colors.length];
+      var svgs = [
+        '<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" fill="' + c + '" opacity="0.08"/><polygon points="40,12 50,32 62,32 52,42 56,58 40,48 24,58 28,42 18,32 30,32" fill="' + c + '" opacity="0.15"/></svg>',
+        '<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" fill="' + c + '" opacity="0.08"/><rect x="15" y="18" width="50" height="6" rx="3" fill="' + c + '" opacity="0.12"/><rect x="15" y="30" width="35" height="5" rx="2" fill="' + c + '" opacity="0.1"/><rect x="15" y="40" width="45" height="5" rx="2" fill="' + c + '" opacity="0.1"/><rect x="15" y="50" width="30" height="5" rx="2" fill="' + c + '" opacity="0.08"/></svg>',
+        '<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="80" fill="' + c + '" opacity="0.08"/><circle cx="40" cy="32" r="14" fill="' + c + '" opacity="0.1"/><rect x="18" y="55" width="44" height="5" rx="2" fill="' + c + '" opacity="0.1"/><rect x="24" y="64" width="32" height="4" rx="2" fill="' + c + '" opacity="0.08"/></svg>'
+      ];
+      return svgs[i % svgs.length];
+    }
+
+    function emptyState() {
+      return '<div class="empty-state" style="grid-column:1/-1;">' +
+        '<svg viewBox="0 0 80 80" style="width:80px;margin:0 auto 12px;opacity:0.2;"><rect x="10" y="10" width="60" height="60" rx="5" fill="currentColor" opacity="0.15"/><rect x="18" y="20" width="44" height="6" rx="3" fill="currentColor" opacity="0.1"/><rect x="18" y="32" width="30" height="5" rx="2" fill="currentColor" opacity="0.08"/></svg>' +
+        '<h3>Tidak Ada Berita</h3>' +
+        '<p>Coba refresh untuk mengambil berita terbaru</p>' +
+        '<button class="btn btn-primary mt-2" onclick="refreshNews()"><i class="fas fa-sync-alt"></i> Refresh Berita</button>' +
+      '</div>';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Pramuka SMPN 1 Leuwigoong</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+         <img src="/images/logo_pramuka_smpn1.svg" alt="Logo Pramuka SMPN 1 Leuwigoong" class="nav-logo"/>
+        <div class="nav-brand-text">
+          <span class="brand-title">PRAMUKA</span>
+          <span class="brand-subtitle">SMPN 1 Leuwigoong</span>
+        </div>
+      </a>
+      <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+      <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link"><i class="fas fa-home"></i> Beranda</a>
+        <a href="/news.html" class="nav-link"><i class="fas fa-newspaper"></i> Berita</a>
+        <a href="/posts.html" class="nav-link"><i class="fas fa-pen-fancy"></i> Blog</a>
+        <a href="/attendance.html" class="nav-link"><i class="fas fa-clipboard-check"></i> Absensi</a>
+        <a href="/chat.html" class="nav-link"><i class="fas fa-comments"></i> Chat</a>
+        <a href="/admin.html" class="nav-link admin-only" style="display:none;"><i class="fas fa-shield-alt"></i> Admin</a>
+      </div>
+      <div class="nav-actions">
+        <button class="notif-btn" id="notifBtn"><i class="fas fa-bell"></i><span class="badge-notif" id="notifBadge" style="display:none;">0</span></button>
+        <div class="nav-user" id="navUser">
+          <img src="" alt="" class="nav-avatar" id="navAvatar">
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile.html"><i class="fas fa-user"></i> Profil</a>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <hr>
+            <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header"><h3>Notifikasi</h3><button class="notif-mark-read" id="markAllRead">Tandai dibaca</button></div>
+    <div class="notif-list" id="notifList"><div class="notif-empty">Tidak ada notifikasi</div></div>
+  </div>
+
+  <div class="page-wrapper">
+    <div class="page-header">
+      <div class="container">
+        <h1 id="dashWelcome">Dashboard</h1>
+        <p>Selamat datang di panel dashboard Pramuka</p>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="container">
+        <!-- Quick Stats -->
+        <div class="dashboard-grid" id="dashStats">
+          <div class="dash-card">
+            <div class="dash-icon green"><i class="fas fa-clipboard-check"></i></div>
+            <div class="dash-info"><h3 id="dashAttCount">0</h3><p>Total Kehadiran</p></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-icon blue"><i class="fas fa-pen-fancy"></i></div>
+            <div class="dash-info"><h3 id="dashPostCount">0</h3><p>Postingan Saya</p></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-icon orange"><i class="fas fa-comments"></i></div>
+            <div class="dash-info"><h3 id="dashMsgCount">0</h3><p>Pesan Belum Dibaca</p></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-icon gold"><i class="fas fa-star"></i></div>
+            <div class="dash-info"><h3 id="dashRank">-</h3><p>Status</p></div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mb-3">
+          <div class="card-header"><h3>Aksi Cepat</h3></div>
+          <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
+            <a href="/attendance.html" class="btn btn-primary"><i class="fas fa-qrcode"></i> Absen Sekarang</a>
+            <a href="/posts.html?new=1" class="btn btn-success"><i class="fas fa-plus"></i> Buat Postingan</a>
+            <a href="/chat.html" class="btn btn-info"><i class="fas fa-comments"></i> Buka Chat</a>
+            <a href="/profile.html" class="btn btn-outline-primary"><i class="fas fa-user-edit"></i> Edit Profil</a>
+          </div>
+        </div>
+
+        <!-- My Attendance History -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <h3><i class="fas fa-history"></i> Riwayat Kehadiran Terakhir</h3>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr><th>Kegiatan</th><th>Tanggal</th><th>Status</th><th>Metode</th></tr>
+                </thead>
+                <tbody id="dashAttHistory">
+                  <tr><td colspan="4" style="text-align:center;color:#999;padding:30px;">Memuat...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- My Posts -->
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-pen-fancy"></i> Postingan Saya</h3>
+            <a href="/posts.html?new=1" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Baru</a>
+          </div>
+          <div class="card-body">
+            <div id="dashMyPosts">
+              <div class="loading-spinner"><div class="spinner"></div><p>Memuat...</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!AuthManager.isLoggedIn()) {
+      window.location.href = '/login.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var user = AuthManager.getUser();
+      if (user) {
+        var welcome = document.getElementById('dashWelcome');
+        if (welcome) welcome.textContent = 'Halo, ' + user.display_name + '!';
+        var rank = document.getElementById('dashRank');
+        if (rank) rank.textContent = user.role === 'admin' ? 'Admin' : user.role === 'pembina' ? 'Pembina' : 'Anggota';
+      }
+      loadDashboardData();
+    });
+
+    async function loadDashboardData() {
+      // Load attendance history
+      try {
+        var attRes = await AuthManager.fetchWithAuth('/api/attendance/my-history');
+        var attData = await attRes.json();
+        var attCount = document.getElementById('dashAttCount');
+        if (attCount) attCount.textContent = attData.history.length;
+
+        var tbody = document.getElementById('dashAttHistory');
+        if (attData.history.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:30px;">Belum ada riwayat kehadiran</td></tr>';
+        } else {
+          tbody.innerHTML = attData.history.slice(0, 10).map(function(a) {
+            var statusClass = a.status === 'hadir' ? 'badge-success' : a.status === 'izin' ? 'badge-warning' : 'badge-danger';
+            return '<tr>' +
+              '<td><strong>' + escapeHtml(a.session_name) + '</strong></td>' +
+              '<td>' + formatDateTime(a.check_in_time) + '</td>' +
+              '<td><span class="badge ' + statusClass + '">' + a.status.toUpperCase() + '</span></td>' +
+              '<td>' + escapeHtml(a.method) + '</td>' +
+            '</tr>';
+          }).join('');
+        }
+      } catch (e) {
+        document.getElementById('dashAttHistory').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;">Gagal memuat</td></tr>';
+      }
+
+      // Load unread messages
+      try {
+        var msgRes = await AuthManager.fetchWithAuth('/api/chat/unread');
+        var msgData = await msgRes.json();
+        var msgCount = document.getElementById('dashMsgCount');
+        if (msgCount) msgCount.textContent = msgData.unread || 0;
+      } catch (e) {}
+
+      // Load my posts
+      try {
+        var postRes = await AuthManager.fetchWithAuth('/api/posts?limit=5');
+        var postData = await postRes.json();
+        var user = AuthManager.getUser();
+        var myPosts = postData.posts.filter(function(p) { return p.user_id === user.id; });
+
+        var postCount = document.getElementById('dashPostCount');
+        if (postCount) postCount.textContent = myPosts.length;
+
+        var container = document.getElementById('dashMyPosts');
+        if (myPosts.length === 0) {
+          container.innerHTML = '<div class="empty-state"><p>Belum ada postingan. <a href="/posts.html?new=1" style="color:var(--primary);font-weight:600;">Buat sekarang!</a></p></div>';
+        } else {
+          container.innerHTML = '<div class="table-responsive"><table class="table"><thead><tr><th>Judul</th><th>Kategori</th><th>Tanggal</th><th>Likes</th></tr></thead><tbody>' +
+            myPosts.map(function(p) {
+              return '<tr onclick="window.location.href=\'/posts.html?id=' + p.id + '\'" style="cursor:pointer;">' +
+                '<td><strong>' + escapeHtml(p.title) + '</strong></td>' +
+                '<td><span class="badge badge-primary">' + escapeHtml(p.category) + '</span></td>' +
+                '<td>' + formatTimeAgo(p.created_at) + '</td>' +
+                '<td><i class="fas fa-heart" style="color:#e74c3c;"></i> ' + (p.likes || 0) + '</td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody></table></div>';
+        }
+      } catch (e) {
+        document.getElementById('dashMyPosts').innerHTML = '<div class="empty-state"><p>Gagal memuat postingan</p></div>';
+      }
+    }
+  </script>
+</body>
+</html>

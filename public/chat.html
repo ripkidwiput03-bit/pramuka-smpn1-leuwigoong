@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat - Pramuka SMPN 1 Leuwigoong</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <style>
+    .chat-back-btn{display:none;background:none;border:none;color:var(--primary);font-size:18px;cursor:pointer;padding:5px;}
+    @media(max-width:768px){
+      .chat-back-btn{display:block;}
+      .chat-main.no-active{display:none;}
+      .chat-sidebar.has-active{display:none !important;}
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+      <img src="/images/logo_pramuka_smpn1.svg" alt="Logo Pramuka SMPN 1 Leuwigoong" class="nav-logo"/>
+        <div class="nav-brand-text"><span class="brand-title">PRAMUKA</span><span class="brand-subtitle">SMPN 1 Leuwigoong</span></div>
+      </a>
+      <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+      <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link"><i class="fas fa-home"></i> Beranda</a>
+        <a href="/news.html" class="nav-link"><i class="fas fa-newspaper"></i> Berita</a>
+        <a href="/posts.html" class="nav-link"><i class="fas fa-pen-fancy"></i> Blog</a>
+        <a href="/attendance.html" class="nav-link"><i class="fas fa-clipboard-check"></i> Absensi</a>
+         <a href="/game.html" class="nav-link auth-only"><i class="fas fa-gamepad"></i> Minigame</a>
+        <a href="/chat.html" class="nav-link active"><i class="fas fa-comments"></i> Chat</a>
+        <a href="/admin.html" class="nav-link admin-only" style="display:none;"><i class="fas fa-shield-alt"></i> Admin</a>
+      </div>
+      <div class="nav-actions">
+        <div class="nav-user" id="navUser">
+          <img src="" alt="" class="nav-avatar" id="navAvatar">
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile.html"><i class="fas fa-user"></i> Profil</a>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <hr><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper" style="padding-top:65px;">
+    <div class="chat-layout">
+      <!-- Sidebar -->
+      <div class="chat-sidebar show" id="chatSidebar">
+        <div class="chat-sidebar-header">
+          <h2><i class="fas fa-comments"></i> Chat</h2>
+          <input type="text" class="chat-search" id="chatSearch" placeholder="Cari anggota..." oninput="filterChatList()">
+        </div>
+        <div class="chat-list" id="chatList">
+          <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Main Chat -->
+      <div class="chat-main no-active" id="chatMain">
+        <div class="chat-main-header" id="chatMainHeader" style="display:none;">
+          <button class="chat-back-btn" onclick="backToList()"><i class="fas fa-arrow-left"></i></button>
+          <div class="chat-main-avatar" id="chatPartnerAvatar"></div>
+          <div class="chat-main-info">
+            <h3 id="chatPartnerName">-</h3>
+            <p id="chatPartnerStatus">Offline</p>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-empty">
+            <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="20" width="60" height="40" rx="20" fill="#e8f5e9" stroke="#2d5016" stroke-width="2"/>
+              <rect x="50" y="50" width="60" height="40" rx="20" fill="#c8e6c9" stroke="#2d5016" stroke-width="2"/>
+              <circle cx="30" cy="40" r="3" fill="#2d5016"/>
+              <circle cx="40" cy="40" r="3" fill="#2d5016"/>
+              <circle cx="50" cy="40" r="3" fill="#2d5016"/>
+              <rect x="60" y="64" width="30" height="4" rx="2" fill="#2d5016" opacity="0.3"/>
+              <rect x="60" y="72" width="20" height="4" rx="2" fill="#2d5016" opacity="0.2"/>
+            </svg>
+            <h3>Pilih percakapan</h3>
+            <p>Pilih anggota dari daftar untuk mulai mengobrol</p>
+          </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+          <i class="fas fa-ellipsis-h"></i> sedang mengetik...
+        </div>
+
+        <div class="chat-input-area" id="chatInputArea" style="display:none;">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Ketik pesan..." onkeypress="handleChatKeyPress(event)">
+          <button class="chat-send-btn" onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    if (!AuthManager.isLoggedIn()) {
+      window.location.href = '/login.html';
+    }
+
+    var currentChatUser = null;
+    var chatSocket = null;
+    var onlineUsers = [];
+    var allChatUsers = [];
+    var typingTimeout = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      AuthManager.updateUI();
+      initChatSocket();
+      loadChatList();
+
+      var params = new URLSearchParams(window.location.search);
+      var userId = params.get('user');
+      if (userId) {
+        setTimeout(function() { openChat(parseInt(userId)); }, 500);
+      }
+
+      // Navbar
+      var toggle = document.getElementById('navToggle');
+      var menu = document.getElementById('navMenu');
+      if (toggle) {
+        toggle.addEventListener('click', function() {
+          toggle.classList.toggle('active');
+          menu.classList.toggle('show');
+        });
+      }
+      var userArea = document.getElementById('navUser');
+      var dropdown = document.getElementById('userDropdown');
+      if (userArea) {
+        userArea.addEventListener('click', function(e) { e.stopPropagation(); dropdown.classList.toggle('show'); });
+        document.addEventListener('click', function() { dropdown.classList.remove('show'); });
+      }
+      var logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) logoutBtn.addEventListener('click', function(e) { e.preventDefault(); AuthManager.logout(); });
+    });
+
+    function initChatSocket() {
+      try {
+        chatSocket = io();
+        var user = AuthManager.getUser();
+        chatSocket.emit('user_online', String(user.id));
+
+        chatSocket.on('online_users', function(users) {
+          onlineUsers = users;
+          updateOnlineStatus();
+        });
+
+        chatSocket.on('new_message', function(msg) {
+          if (currentChatUser && (msg.sender_id === currentChatUser || msg.receiver_id === currentChatUser)) {
+            appendMessage(msg);
+            scrollToBottom();
+          }
+          loadChatList();
+        });
+
+        chatSocket.on('user_typing', function(data) {
+          if (currentChatUser && data.senderId === currentChatUser) {
+            document.getElementById('typingIndicator').style.display = 'block';
+          }
+        });
+
+        chatSocket.on('user_stop_typing', function(data) {
+          if (currentChatUser && data.senderId === currentChatUser) {
+            document.getElementById('typingIndicator').style.display = 'none';
+          }
+        });
+
+        chatSocket.on('notification', function(data) {
+          showToast(data.message, 'info', data.title);
+        });
+      } catch (e) {
+        console.log('Socket init skipped');
+      }
+    }
+
+    async function loadChatList() {
+      var list = document.getElementById('chatList');
+      try {
+        // Load conversations
+        var convRes = await AuthManager.fetchWithAuth('/api/chat/conversations');
+        var convData = await convRes.json();
+
+        // Load all users
+        var usersRes = await AuthManager.fetchWithAuth('/api/chat/users');
+        var usersData = await usersRes.json();
+        allChatUsers = usersData.users || [];
+
+        var conversations = convData.conversations || [];
+
+        if (conversations.length === 0 && allChatUsers.length === 0) {
+          list.innerHTML = '<div style="padding:30px;text-align:center;color:#999;">Tidak ada anggota lain</div>';
+          return;
+        }
+
+        var html = '';
+
+        // Existing conversations
+        if (conversations.length > 0) {
+          html += '<div style="padding:8px 18px;font-size:11px;color:#999;text-transform:uppercase;font-weight:700;">Percakapan</div>';
+          conversations.forEach(function(c) {
+            var isOnline = onlineUsers.includes(String(c.other_user_id));
+            var avatar = c.photo_url || generateAvatarUrl(c.display_name);
+            var initials = (c.display_name || '?')[0].toUpperCase();
+
+            html += '<div class="chat-item" data-name="' + (c.display_name || '').toLowerCase() + '" onclick="openChat(' + c.other_user_id + ')">' +
+              '<div class="chat-item-avatar" style="background-image:url(' + avatar + ');background-size:cover;background-position:center;">' +
+                (c.photo_url ? '' : initials) +
+              '</div>' +
+              '<div class="chat-item-info">' +
+                '<div class="chat-item-name">' + (isOnline ? '<span class="chat-online-dot"></span>' : '') + escapeHtml(c.display_name) + '</div>' +
+                '<div class="chat-item-preview">' + escapeHtml(c.last_message || '') + '</div>' +
+              '</div>' +
+              '<div class="chat-item-meta">' +
+                '<div class="chat-item-time">' + formatTimeAgo(c.last_message_time) + '</div>' +
+                (c.unread_count > 0 ? '<div class="chat-item-unread">' + c.unread_count + '</div>' : '') +
+              '</div>' +
+            '</div>';
+          });
+        }
+
+        // All users
+        var convIds = conversations.map(function(c) { return c.other_user_id; });
+        var otherUsers = allChatUsers.filter(function(u) { return !convIds.includes(u.id); });
+
+        if (otherUsers.length > 0) {
+          html += '<div style="padding:8px 18px;font-size:11px;color:#999;text-transform:uppercase;font-weight:700;margin-top:10px;">Anggota Lain</div>';
+          otherUsers.forEach(function(u) {
+            var avatar = u.photo_url || generateAvatarUrl(u.display_name);
+            var initials = (u.display_name || '?')[0].toUpperCase();
+            html += '<div class="chat-item" data-name="' + (u.display_name || '').toLowerCase() + '" onclick="openChat(' + u.id + ')">' +
+              '<div class="chat-item-avatar" style="background-image:url(' + avatar + ');background-size:cover;">' + (u.photo_url ? '' : initials) + '</div>' +
+              '<div class="chat-item-info"><div class="chat-item-name">' + escapeHtml(u.display_name) + '</div><div class="chat-item-preview" style="color:var(--primary);">' + escapeHtml(u.role) + ' • ' + escapeHtml(u.regu || '-') + '</div></div></div>';
+          });
+        }
+
+        list.innerHTML = html;
+      } catch (e) {
+        list.innerHTML = '<div style="padding:30px;text-align:center;color:#999;">Gagal memuat</div>';
+      }
+    }
+
+    function filterChatList() {
+      var search = document.getElementById('chatSearch').value.toLowerCase();
+      document.querySelectorAll('.chat-item').forEach(function(item) {
+        var name = item.getAttribute('data-name') || '';
+        item.style.display = name.includes(search) ? '' : 'none';
+      });
+    }
+
+    async function openChat(userId) {
+      currentChatUser = userId;
+      var me = AuthManager.getUser();
+
+      // Join room
+      if (chatSocket) {
+        chatSocket.emit('join_chat', { senderId: me.id, receiverId: userId });
+      }
+
+      // UI update
+      document.getElementById('chatMainHeader').style.display = 'flex';
+      document.getElementById('chatInputArea').style.display = 'flex';
+      document.getElementById('chatMain').classList.remove('no-active');
+
+      // Mobile: hide sidebar
+      document.getElementById('chatSidebar').classList.add('has-active');
+
+      // Load messages
+      var messagesDiv = document.getElementById('chatMessages');
+      messagesDiv.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/chat/messages/' + userId);
+        var data = await response.json();
+        var other = data.otherUser;
+
+        if (other) {
+          document.getElementById('chatPartnerName').textContent = other.display_name;
+          var isOnline = onlineUsers.includes(String(userId));
+          document.getElementById('chatPartnerStatus').innerHTML = isOnline ? '<span class="chat-online-dot"></span> Online' : 'Offline';
+
+          var avatarDiv = document.getElementById('chatPartnerAvatar');
+          if (other.photo_url) {
+            avatarDiv.style.backgroundImage = 'url(' + other.photo_url + ')';
+            avatarDiv.style.backgroundSize = 'cover';
+            avatarDiv.textContent = '';
+          } else {
+            avatarDiv.style.backgroundImage = 'none';
+            avatarDiv.textContent = (other.display_name || '?')[0].toUpperCase();
+          }
+        }
+
+        if (data.messages.length === 0) {
+          messagesDiv.innerHTML = '<div class="chat-empty" style="padding:20px;"><p style="color:#999;">Mulai percakapan baru!</p></div>';
+        } else {
+          messagesDiv.innerHTML = '';
+          data.messages.forEach(function(msg) {
+            appendMessage(msg);
+          });
+          scrollToBottom();
+        }
+
+        // Highlight active
+        document.querySelectorAll('.chat-item').forEach(function(item) { item.classList.remove('active'); });
+
+        // Focus input
+        document.getElementById('chatInput').focus();
+        loadChatList();
+      } catch (e) {
+        messagesDiv.innerHTML = '<div class="chat-empty"><p>Gagal memuat pesan</p></div>';
+      }
+    }
+
+    function appendMessage(msg) {
+      var me = AuthManager.getUser();
+      var isSent = msg.sender_id === me.id;
+      var div = document.createElement('div');
+      div.className = 'message ' + (isSent ? 'message-sent' : 'message-received');
+      div.innerHTML = escapeHtml(msg.content) + '<div class="message-time">' + formatTimeAgo(msg.created_at) + '</div>';
+
+      var container = document.getElementById('chatMessages');
+      var emptyDiv = container.querySelector('.chat-empty');
+      if (emptyDiv) emptyDiv.remove();
+      container.appendChild(div);
+    }
+
+    function scrollToBottom() {
+      var container = document.getElementById('chatMessages');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage() {
+      var input = document.getElementById('chatInput');
+      var content = input.value.trim();
+      if (!content || !currentChatUser) return;
+
+      var me = AuthManager.getUser();
+      input.value = '';
+
+      // Emit via socket
+      if (chatSocket) {
+        chatSocket.emit('send_message', {
+          senderId: me.id,
+          receiverId: currentChatUser,
+          senderName: me.display_name,
+          content: content
+        });
+        chatSocket.emit('stop_typing', { senderId: me.id, receiverId: currentChatUser });
+      }
+
+      // Save to DB
+      try {
+        await AuthManager.fetchWithAuth('/api/chat/messages', {
+          method: 'POST',
+          body: JSON.stringify({ receiverId: currentChatUser, content: content })
+        });
+      } catch (e) {
+        showToast('Gagal mengirim pesan', 'error');
+      }
+
+      // Append locally
+      appendMessage({
+        sender_id: me.id,
+        receiver_id: currentChatUser,
+        content: content,
+        created_at: new Date().toISOString()
+      });
+      scrollToBottom();
+    }
+
+    function handleChatKeyPress(e) {
+      if (e.key === 'Enter') {
+        sendMessage();
+        return;
+      }
+
+      // Typing indicator
+      var me = AuthManager.getUser();
+      if (chatSocket && currentChatUser) {
+        chatSocket.emit('typing', { senderId: me.id, receiverId: currentChatUser });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(function() {
+          chatSocket.emit('stop_typing', { senderId: me.id, receiverId: currentChatUser });
+        }, 2000);
+      }
+    }
+
+    function updateOnlineStatus() {
+      if (currentChatUser) {
+        var isOnline = onlineUsers.includes(String(currentChatUser));
+        var statusEl = document.getElementById('chatPartnerStatus');
+        if (statusEl) {
+          statusEl.innerHTML = isOnline ? '<span class="chat-online-dot"></span> Online' : 'Offline';
+        }
+      }
+    }
+
+    function backToList() {
+      currentChatUser = null;
+      document.getElementById('chatMain').classList.add('no-active');
+      document.getElementById('chatSidebar').classList.remove('has-active');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTimeAgo(dateStr) {
+      if (!dateStr) return '';
+      var date = new Date(dateStr);
+      var now = new Date();
+      var diff = Math.floor((now - date) / 1000);
+      if (diff < 60) return 'Baru saja';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'j';
+      return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    }
+
+    function generateAvatarUrl(name) {
+      var initials = (name || '?').split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+      var colors = ['#2d5016','#1565C0','#C62828','#6A1B9A','#E65100','#2E7D32','#AD1457','#00838F'];
+      var hash = 0;
+      for (var i = 0; i < (name||'').length; i++) { hash = ((hash << 5) - hash) + (name||'').charCodeAt(i); hash |= 0; }
+      var color = colors[Math.abs(hash) % colors.length];
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" rx="50" fill="'+color+'"/><text x="50" y="55" text-anchor="middle" dy=".1em" fill="white" font-size="38" font-weight="bold">'+initials+'</text></svg>';
+      return 'data:image/svg+xml;base64,' + btoa(svg);
+    }
+  </script>
+</body>
+</html>

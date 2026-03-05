@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Pramuka SMPN 1 Leuwigoong</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <style>
+    .admin-mobile-toggle{display:none;position:fixed;bottom:20px;right:20px;z-index:101;width:50px;height:50px;border-radius:50%;background:var(--primary);color:white;border:none;font-size:20px;cursor:pointer;box-shadow:var(--shadow-lg);}
+    @media(max-width:768px){.admin-mobile-toggle{display:flex;align-items:center;justify-content:center;}}
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+       <img src="/images/logo_pramuka_smpn1.svg" alt="Logo Pramuka SMPN 1 Leuwigoong" class="nav-logo"/>
+        <div class="nav-brand-text"><span class="brand-title">PRAMUKA</span><span class="brand-subtitle">SMPN 1 Leuwigoong</span></div>
+      </a>
+      <button class="nav-toggle" id="navToggle"><span></span><span></span><span></span></button>
+      <div class="nav-menu" id="navMenu">
+        <a href="/" class="nav-link"><i class="fas fa-home"></i> Beranda</a>
+        <a href="/dashboard.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="/admin.html" class="nav-link active"><i class="fas fa-shield-alt"></i> Admin</a>
+      </div>
+      <div class="nav-actions">
+        <div class="nav-user" id="navUser">
+          <img src="" alt="" class="nav-avatar" id="navAvatar">
+          <div class="user-dropdown" id="userDropdown">
+            <a href="/profile.html"><i class="fas fa-user"></i> Profil</a>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <hr><a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="admin-layout">
+      <!-- Sidebar -->
+      <div class="admin-sidebar" id="adminSidebar">
+        <div class="admin-sidebar-title"><i class="fas fa-shield-alt"></i> Admin Panel</div>
+        <div class="admin-nav-item active" onclick="switchAdminTab('dashboard', this)"><i class="fas fa-tachometer-alt"></i> Dashboard</div>
+        <div class="admin-nav-item" onclick="switchAdminTab('users', this)"><i class="fas fa-users"></i> Kelola Anggota</div>
+        <div class="admin-nav-item" onclick="switchAdminTab('posts', this)"><i class="fas fa-pen-fancy"></i> Kelola Postingan</div>
+        <div class="admin-nav-item" onclick="switchAdminTab('attendance', this)"><i class="fas fa-clipboard-check"></i> Kelola Absensi</div>
+        <div class="admin-nav-item" onclick="switchAdminTab('broadcast', this)"><i class="fas fa-bullhorn"></i> Broadcast</div>
+        <div class="admin-nav-item" onclick="switchAdminTab('export', this)"><i class="fas fa-file-export"></i> Export Data</div>
+      </div>
+
+      <!-- Content -->
+      <div class="admin-content">
+        <!-- Dashboard Tab -->
+        <div class="admin-tab active" id="adminTab-dashboard">
+          <h2 style="margin-bottom:20px;color:var(--primary);"><i class="fas fa-tachometer-alt"></i> Dashboard Admin</h2>
+          <div class="dashboard-grid" id="adminDashStats"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;" id="adminDashCharts">
+            <div class="card"><div class="card-header"><h3>Anggota Terbaru</h3></div><div class="card-body" id="adminRecentUsers"></div></div>
+            <div class="card"><div class="card-header"><h3>Statistik Regu</h3></div><div class="card-body" id="adminReguStats"></div></div>
+          </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="admin-tab" id="adminTab-users">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+            <h2 style="color:var(--primary);"><i class="fas fa-users"></i> Kelola Anggota</h2>
+            <a href="/api/admin/export/members" class="btn btn-success btn-sm" target="_blank"><i class="fas fa-file-excel"></i> Export Excel</a>
+          </div>
+          <div class="search-bar"><input type="text" id="userSearch" placeholder="Cari nama atau email..." onkeyup="searchUsers()"><button class="btn btn-primary" onclick="searchUsers()"><i class="fas fa-search"></i></button></div>
+          <div class="card"><div class="card-body"><div class="table-responsive"><table class="table"><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Regu</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="adminUsersTable"><tr><td colspan="7" style="text-align:center;padding:30px;">Memuat...</td></tr></tbody></table></div></div></div>
+        </div>
+
+        <!-- Posts Tab -->
+        <div class="admin-tab" id="adminTab-posts">
+          <h2 style="margin-bottom:20px;color:var(--primary);"><i class="fas fa-pen-fancy"></i> Kelola Postingan</h2>
+          <div class="card"><div class="card-body"><div class="table-responsive"><table class="table"><thead><tr><th>Judul</th><th>Penulis</th><th>Kategori</th><th>Status</th><th>Likes</th><th>Aksi</th></tr></thead><tbody id="adminPostsTable"><tr><td colspan="6" style="text-align:center;padding:30px;">Memuat...</td></tr></tbody></table></div></div></div>
+        </div>
+
+        <!-- Attendance Tab -->
+        <div class="admin-tab" id="adminTab-attendance">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+            <h2 style="color:var(--primary);"><i class="fas fa-clipboard-check"></i> Kelola Absensi</h2>
+            <a href="/attendance.html" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Buat Sesi Baru</a>
+          </div>
+          <div id="adminAttSessions"><div class="loading-spinner"><div class="spinner"></div></div></div>
+        </div>
+
+        <!-- Broadcast Tab -->
+        <div class="admin-tab" id="adminTab-broadcast">
+          <h2 style="margin-bottom:20px;color:var(--primary);"><i class="fas fa-bullhorn"></i> Broadcast Notifikasi</h2>
+          <div class="card" style="max-width:600px;">
+            <div class="card-body">
+              <form onsubmit="sendBroadcast(event)">
+                <div class="form-group"><label class="form-label">Judul</label><input type="text" id="broadcastTitle" class="form-input" placeholder="Judul notifikasi..." required></div>
+                <div class="form-group"><label class="form-label">Pesan</label><textarea id="broadcastMessage" class="form-input" rows="4" placeholder="Isi pesan..." required></textarea></div>
+                <div class="form-group"><label class="form-label">Tipe</label><select id="broadcastType" class="form-input"><option value="info">Info</option><option value="warning">Peringatan</option><option value="attendance">Absensi</option></select></div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Kirim Broadcast</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export Tab -->
+        <div class="admin-tab" id="adminTab-export">
+          <h2 style="margin-bottom:20px;color:var(--primary);"><i class="fas fa-file-export"></i> Export Data</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">
+            <div class="card">
+              <div class="card-body" style="text-align:center;padding:30px;">
+                <svg viewBox="0 0 60 60" style="width:60px;margin-bottom:15px;"><rect x="5" y="5" width="50" height="50" rx="5" fill="#e8f5e9" stroke="#2d5016" stroke-width="2"/><text x="30" y="38" text-anchor="middle" fill="#2d5016" font-size="14" font-weight="bold">XLS</text></svg>
+                <h3 style="font-size:16px;margin-bottom:8px;">Data Anggota</h3>
+                <p style="font-size:13px;color:#999;margin-bottom:15px;">Export semua data anggota ke Excel</p>
+                <a href="/api/admin/export/members" class="btn btn-success btn-sm" target="_blank"><i class="fas fa-download"></i> Download Excel</a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-body" style="text-align:center;padding:30px;">
+                <svg viewBox="0 0 60 60" style="width:60px;margin-bottom:15px;"><rect x="5" y="5" width="50" height="50" rx="5" fill="#ffebee" stroke="#c62828" stroke-width="2"/><text x="30" y="38" text-anchor="middle" fill="#c62828" font-size="14" font-weight="bold">PDF</text></svg>
+                <h3 style="font-size:16px;margin-bottom:8px;">Absensi ke PDF</h3>
+                <p style="font-size:13px;color:#999;margin-bottom:15px;">Pilih sesi absensi di tab Absensi untuk export</p>
+                <button class="btn btn-info btn-sm" onclick="switchAdminTab('attendance', document.querySelectorAll('.admin-nav-item')[3])"><i class="fas fa-arrow-right"></i> Ke Absensi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="admin-mobile-toggle" onclick="toggleAdminSidebar()"><i class="fas fa-bars"></i></button>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!AuthManager.isLoggedIn() || !AuthManager.isAdmin()) {
+      showToast && showToast('Akses ditolak', 'error');
+      window.location.href = '/login.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadAdminDashboard();
+      loadAdminUsers();
+      loadAdminPosts();
+      loadAdminAttendance();
+    });
+
+    function switchAdminTab(tab, el) {
+      document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.admin-nav-item').forEach(function(n) { n.classList.remove('active'); });
+      document.getElementById('adminTab-' + tab).classList.add('active');
+      if (el) el.classList.add('active');
+      // Close sidebar on mobile
+      document.getElementById('adminSidebar').classList.remove('show');
+    }
+
+    function toggleAdminSidebar() {
+      document.getElementById('adminSidebar').classList.toggle('show');
+    }
+
+    async function loadAdminDashboard() {
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/admin/dashboard');
+        var data = await response.json();
+        var s = data.stats;
+
+        document.getElementById('adminDashStats').innerHTML =
+          '<div class="dash-card"><div class="dash-icon green"><i class="fas fa-users"></i></div><div class="dash-info"><h3>' + s.totalUsers + '</h3><p>Total Anggota</p></div></div>' +
+          '<div class="dash-card"><div class="dash-icon blue"><i class="fas fa-pen-fancy"></i></div><div class="dash-info"><h3>' + s.totalPosts + '</h3><p>Postingan</p></div></div>' +
+          '<div class="dash-card"><div class="dash-icon orange"><i class="fas fa-clipboard-check"></i></div><div class="dash-info"><h3>' + s.totalSessions + '</h3><p>Sesi Absensi</p></div></div>' +
+          '<div class="dash-card"><div class="dash-icon gold"><i class="fas fa-comments"></i></div><div class="dash-info"><h3>' + s.totalMessages + '</h3><p>Total Pesan</p></div></div>';
+
+        // Recent users
+        document.getElementById('adminRecentUsers').innerHTML = data.recentUsers.slice(0, 5).map(function(u) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;"><div><strong style="font-size:13px;">' + escapeHtml(u.display_name) + '</strong><br><span style="font-size:11px;color:#999;">' + escapeHtml(u.email) + '</span></div><span class="badge badge-primary" style="font-size:10px;">' + u.role + '</span></div>';
+        }).join('') || '<p style="color:#999;">Tidak ada data</p>';
+
+        // Regu stats
+        document.getElementById('adminReguStats').innerHTML = data.reguStats.map(function(r) {
+          return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;"><span style="font-size:13px;font-weight:600;">' + escapeHtml(r.regu) + '</span><span class="badge badge-success">' + r.count + ' anggota</span></div>';
+        }).join('') || '<p style="color:#999;">Belum ada data regu</p>';
+      } catch (e) {
+        document.getElementById('adminDashStats').innerHTML = '<p style="color:#999;">Gagal memuat</p>';
+      }
+    }
+
+    async function loadAdminUsers() {
+      try {
+        var search = document.getElementById('userSearch') ? document.getElementById('userSearch').value : '';
+        var response = await AuthManager.fetchWithAuth('/api/admin/users?search=' + encodeURIComponent(search) + '&limit=50');
+        var data = await response.json();
+        var tbody = document.getElementById('adminUsersTable');
+
+        if (data.users.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">Tidak ada data</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.users.map(function(u) {
+          return '<tr>' +
+            '<td><strong>' + escapeHtml(u.display_name) + '</strong></td>' +
+            '<td style="font-size:12px;">' + escapeHtml(u.email) + '</td>' +
+            '<td><select class="form-input" style="padding:4px 8px;font-size:12px;min-width:90px;" onchange="changeRole(' + u.id + ', this.value)" ' + (u.email === 'ripkidwiput03@gmail.com' ? 'disabled' : '') + '><option value="member" ' + (u.role === 'member' ? 'selected' : '') + '>Member</option><option value="pembina" ' + (u.role === 'pembina' ? 'selected' : '') + '>Pembina</option><option value="admin" ' + (u.role === 'admin' ? 'selected' : '') + '>Admin</option></select></td>' +
+            '<td>' + escapeHtml(u.regu || '-') + '</td>' +
+            '<td>' + escapeHtml(u.kelas || '-') + '</td>' +
+            '<td><span class="badge ' + (u.is_active ? 'badge-success' : 'badge-danger') + '">' + (u.is_active ? 'Aktif' : 'Nonaktif') + '</span></td>' +
+            '<td><div style="display:flex;gap:5px;">' +
+              '<button class="btn btn-sm btn-warning" onclick="toggleUser(' + u.id + ')" title="Toggle"><i class="fas fa-power-off"></i></button>' +
+              (u.email !== 'ripkidwiput03@gmail.com' ? '<button class="btn btn-sm btn-danger" onclick="deleteUser(' + u.id + ')" title="Hapus"><i class="fas fa-trash"></i></button>' : '') +
+            '</div></td>' +
+          '</tr>';
+        }).join('');
+      } catch (e) {
+        document.getElementById('adminUsersTable').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">Gagal memuat</td></tr>';
+      }
+    }
+
+    function searchUsers() { loadAdminUsers(); }
+
+    async function changeRole(userId, role) {
+      try {
+        await AuthManager.fetchWithAuth('/api/admin/users/' + userId + '/role', { method: 'PUT', body: JSON.stringify({ role: role }) });
+        showToast('Role berhasil diubah', 'success');
+      } catch (e) { showToast('Gagal', 'error'); }
+    }
+
+    async function toggleUser(userId) {
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/admin/users/' + userId + '/toggle', { method: 'PUT' });
+        var data = await response.json();
+        showToast(data.message, 'success');
+        loadAdminUsers();
+      } catch (e) { showToast('Gagal', 'error'); }
+    }
+
+    async function deleteUser(userId) {
+      if (!confirm('Yakin hapus user ini? Semua data akan hilang!')) return;
+      try {
+        await AuthManager.fetchWithAuth('/api/admin/users/' + userId, { method: 'DELETE' });
+        showToast('User dihapus', 'success');
+        loadAdminUsers();
+        loadAdminDashboard();
+      } catch (e) { showToast('Gagal', 'error'); }
+    }
+
+    async function loadAdminPosts() {
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/admin/posts');
+        var data = await response.json();
+        var tbody = document.getElementById('adminPostsTable');
+
+        if (!data.posts || data.posts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">Belum ada postingan</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.posts.map(function(p) {
+          return '<tr>' +
+            '<td><strong>' + escapeHtml(p.title.substring(0, 40)) + '</strong></td>' +
+            '<td>' + escapeHtml(p.author_name || '-') + '</td>' +
+            '<td><span class="badge badge-primary">' + escapeHtml(p.category) + '</span></td>' +
+            '<td><span class="badge ' + (p.is_published ? 'badge-success' : 'badge-danger') + '">' + (p.is_published ? 'Published' : 'Hidden') + '</span></td>' +
+            '<td>' + (p.likes || 0) + '</td>' +
+            '<td><div style="display:flex;gap:5px;">' +
+              '<button class="btn btn-sm btn-warning" onclick="togglePost(' + p.id + ')"><i class="fas fa-eye"></i></button>' +
+              '<button class="btn btn-sm btn-danger" onclick="deletePost(' + p.id + ')"><i class="fas fa-trash"></i></button>' +
+            '</div></td>' +
+          '</tr>';
+        }).join('');
+      } catch (e) {
+        document.getElementById('adminPostsTable').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">Gagal</td></tr>';
+      }
+    }
+
+    async function togglePost(id) {
+      try {
+        await AuthManager.fetchWithAuth('/api/admin/posts/' + id + '/toggle', { method: 'PUT' });
+        showToast('Status postingan diubah', 'success');
+        loadAdminPosts();
+      } catch (e) { showToast('Gagal', 'error'); }
+    }
+
+    async function deletePost(id) {
+      if (!confirm('Hapus postingan ini?')) return;
+      try {
+        await AuthManager.fetchWithAuth('/api/admin/posts/' + id, { method: 'DELETE' });
+        showToast('Postingan dihapus', 'success');
+        loadAdminPosts();
+      } catch (e) { showToast('Gagal', 'error'); }
+    }
+
+    async function loadAdminAttendance() {
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/attendance/sessions');
+        var data = await response.json();
+        var container = document.getElementById('adminAttSessions');
+
+        if (!data.sessions || data.sessions.length === 0) {
+          container.innerHTML = '<div class="empty-state"><h3>Belum ada sesi</h3><a href="/attendance.html" class="btn btn-primary mt-2"><i class="fas fa-plus"></i> Buat Sesi</a></div>';
+          return;
+        }
+
+        container.innerHTML = data.sessions.map(function(s) {
+          return '<div class="session-card">' +
+            '<div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:10px;">' +
+              '<div><h3>' + escapeHtml(s.name) + '</h3><div class="session-meta"><span><i class="fas fa-calendar"></i> ' + escapeHtml(s.date) + '</span><span><i class="fas fa-users"></i> ' + (s.total_attendance || 0) + ' hadir</span></div></div>' +
+              '<div style="display:flex;gap:5px;flex-wrap:wrap;">' +
+                '<a href="/api/admin/export/attendance/' + s.id + '" class="btn btn-sm btn-success" target="_blank"><i class="fas fa-file-excel"></i> Excel</a>' +
+                '<a href="/api/admin/export/attendance-pdf/' + s.id + '" class="btn btn-sm btn-danger" target="_blank"><i class="fas fa-file-pdf"></i> PDF</a>' +
+                '<span class="session-status ' + (s.is_active ? 'active' : 'closed') + '">' + (s.is_active ? 'Aktif' : 'Ditutup') + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch (e) {
+        document.getElementById('adminAttSessions').innerHTML = '<p style="color:#999;">Gagal memuat</p>';
+      }
+    }
+
+    async function sendBroadcast(e) {
+      e.preventDefault();
+      try {
+        var response = await AuthManager.fetchWithAuth('/api/admin/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: document.getElementById('broadcastTitle').value,
+            message: document.getElementById('broadcastMessage').value,
+            type: document.getElementById('broadcastType').value
+          })
+        });
+        var data = await response.json();
+        if (response.ok) {
+          showToast(data.message, 'success');
+          document.getElementById('broadcastTitle').value = '';
+          document.getElementById('broadcastMessage').value = '';
+        } else {
+          showToast(data.error || 'Gagal', 'error');
+        }
+      } catch (e) { showToast('Gagal', 'error'); }
+    }
+  </script>
+</body>
+</html>
